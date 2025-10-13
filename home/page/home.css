@@ -1,0 +1,22 @@
+html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.radio-group {
+    display: flex;
+   
+    align-items: center;
+    justify-content: center;
+    gap: 20px; /* 選択肢の間の隙間 */
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 20px;
+    font-size: 25px;
+}
