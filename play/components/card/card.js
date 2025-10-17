@@ -1,15 +1,31 @@
 function initializeCards() {
   const cards = document.querySelectorAll('.card');
+
   cards.forEach(card => {
     card.addEventListener('click', () => {
       const isAlreadySelected = card.classList.contains('selected');
+      const isNumber = card.classList.contains('card-number');
+      const isOperator = card.classList.contains('card-operator');
 
-      // Deselect all cards first
-      cards.forEach(c => c.classList.remove('selected'));
+      let groupSelector = null;
+      if (isNumber) {
+        groupSelector = '.card-number';
+      } else if (isOperator) {
+        groupSelector = '.card-operator';
+      }
 
-      // If the card was not already selected, select it
-      if (!isAlreadySelected) {
-        card.classList.add('selected');
+      // If the card belongs to a group, handle single selection within that group
+      if (groupSelector) {
+        // Deselect all cards in the same group
+        document.querySelectorAll(groupSelector).forEach(c => {
+          c.classList.remove('selected');
+        });
+
+        // If the clicked card was not already selected, select it.
+        // This makes it the only selected one in its group.
+        if (!isAlreadySelected) {
+          card.classList.add('selected');
+        }
       }
     });
   });
