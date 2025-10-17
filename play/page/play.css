@@ -1,0 +1,95 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    font-size: min(1vh, 0.7vw);
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    user-select: none;
+}
+
+#area {
+    background-color: #eef;
+    width: 100vw;
+    height: 100rem;
+
+    display: grid;
+    place-items: center;
+}
+
+#field {
+    /*background-color: #fcc;*/
+    width: 100rem;
+    height: 30rem;
+
+    display: grid;
+    grid-auto-flow: column;
+    place-items: center;
+
+    .card {
+        width: 12rem;
+        height: 18rem;
+
+        font-size: 9rem;
+    }
+}
+
+#hand {
+    /*background-color: #cfc;*/
+    width: 100rem;
+    height: 30rem;
+
+    display: grid;
+    grid-auto-flow: column;
+    place-items: center;
+
+    >div {
+        /*background-color: #ffc;*/
+
+        width: 45rem;
+        height: 30rem;
+
+        display: grid;
+        grid-auto-flow: column;
+        place-items: center;
+    }
+}
+
+.card {
+    background-color: #fff;
+    border: #ccf 0.5rem solid;
+    border-radius: 1rem;
+
+    width: 8rem;
+    height: 12rem;
+
+    font-size: 6rem;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    transition: 0.1s scale ease-out, 0.1s border-color;
+    will-change: translate, scale, opacity, border-color;
+
+    &.chosen,
+    &#dummy {
+        border-color: #fcc;
+        scale: 1.2;
+    }
+}
+
+#dummy {
+    position: absolute;
+    display: none;
+}
