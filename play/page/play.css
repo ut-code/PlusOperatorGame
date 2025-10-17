@@ -1,0 +1,6 @@
+#game-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px; /* カード間の隙間 */
+  padding: 16px; /* ボードの内側の余白 */
+}
