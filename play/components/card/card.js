@@ -2,7 +2,15 @@ function initializeCards() {
   const cards = document.querySelectorAll('.card');
   cards.forEach(card => {
     card.addEventListener('click', () => {
-      card.classList.toggle('selected');
+      const isAlreadySelected = card.classList.contains('selected');
+
+      // Deselect all cards first
+      cards.forEach(c => c.classList.remove('selected'));
+
+      // If the card was not already selected, select it
+      if (!isAlreadySelected) {
+        card.classList.add('selected');
+      }
     });
   });
 }
