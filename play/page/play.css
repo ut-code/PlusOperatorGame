@@ -16,10 +16,15 @@ body {
     align-items: center;
 
     user-select: none;
+    overflow: hidden;
+}
+
+#title {
+    font-size: 10rem;
 }
 
 #area {
-    background-color: #eef;
+    background-color: #ddf;
     width: 100vw;
     height: 100rem;
 
@@ -28,36 +33,33 @@ body {
 }
 
 #field {
-    /*background-color: #fcc;*/
-    width: 100rem;
+    background-color: #eef;
+    border-radius: 5rem;
+    box-sizing: border-box;
+
+    width: 120rem;
     height: 30rem;
 
     display: grid;
     grid-auto-flow: column;
     place-items: center;
-
-    .card {
-        width: 12rem;
-        height: 18rem;
-
-        font-size: 9rem;
-    }
 }
 
 #hand {
-    /*background-color: #cfc;*/
-    width: 100rem;
-    height: 30rem;
+    width: 120rem;
+    height: 20rem;
 
     display: grid;
     grid-auto-flow: column;
-    place-items: center;
+    justify-content: space-between;
 
     >div {
-        /*background-color: #ffc;*/
+        width: 58rem;
+        height: 20rem;
 
-        width: 45rem;
-        height: 30rem;
+        background-color: #eef;
+        border-radius: 3rem;
+        box-sizing: border-box;
 
         display: grid;
         grid-auto-flow: column;
@@ -67,13 +69,13 @@ body {
 
 .card {
     background-color: #fff;
-    border: #ccf 0.5rem solid;
+    border: #99f 0.5rem solid;
     border-radius: 1rem;
 
-    width: 8rem;
+    width: 10rem;
     height: 12rem;
 
-    font-size: 6rem;
+    font-size: 4rem;
 
     display: flex;
     justify-content: center;
@@ -81,10 +83,18 @@ body {
 
     transition: 0.1s scale ease-out, 0.1s border-color;
     will-change: translate, scale, opacity, border-color;
+    backface-visibility: visible;
+
+    #field & {
+        width: 15rem;
+        height: 18rem;
+
+        font-size: 6rem;
+    }
 
     &.chosen,
     &#dummy {
-        border-color: #fcc;
+        border-color: #f99;
         scale: 1.2;
     }
 }
