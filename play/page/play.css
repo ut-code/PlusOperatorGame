@@ -20,7 +20,7 @@ body {
 }
 
 #title {
-    font-size: 10rem;
+    font-size: 8rem;
 }
 
 #area {
@@ -92,7 +92,8 @@ body {
         font-size: 6rem;
     }
 
-    &.chosen {
+    &.chosen,
+    &.display {
         border-color: #f99;
         scale: 1.2;
     }

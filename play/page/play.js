@@ -151,7 +151,7 @@ class Game {
 		this.level = level;
 
 		this.state = {
-			field: new State('field', 4, () => Math.floor(Math.random() * 8 + 2)),
+			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
 			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
 			op: new State('op', 4, () => Math.floor(Math.random() * Op.list.length)),
 			apply: new State('apply', 1, () => '=')
@@ -247,7 +247,7 @@ async function animate(ele, keyframes, duration) {
 	const anime = ele.animate(keyframes, {
 		duration,
 		fill: 'forwards',
-		easing: 'ease-out'
+		easing: 'ease-in-out'
 	});
 	await anime.finished;
 	anime.commitStyles();
@@ -271,8 +271,11 @@ async function applyAnimation(old, renew, index) {
 
 	ele.dummy = cards.dummy;
 
-	for (const key in ele)
+	for (const key of keys) {
 		ele[key].style.zIndex = 1;
+		ele[key].classList.add('display');
+	}
+	ele.field.style.zIndex = 2;
 
 	// カードを中心に
 	await Promise.all(
@@ -283,6 +286,8 @@ async function applyAnimation(old, renew, index) {
 			}, 500);
 		})
 	);
+
+	await new Promise((resolve) => setTimeout(resolve, 300));
 
 	// 両端のカード入れ替え
 	Object.assign(ele.dummy.style, {
@@ -311,6 +316,7 @@ async function applyAnimation(old, renew, index) {
 
 	await new Promise((res) => setTimeout(res, 1000));
 
+	if (renew.field !== 1) ele.field.classList.remove('display');
 	// 場のカードを戻す
 	animate(ele.field,
 		renew.field === 1
@@ -338,6 +344,9 @@ async function applyAnimation(old, renew, index) {
 
 	ele.dummy.style.display = 'none';
 
+	for (const key of rest)
+		ele[key].classList.remove('display');
+
 	displayOperator(index.op, Op.list[renew.op].name);
 	if (index.num !== -1) ele.num.textContent = `${renew.num}`;
 
@@ -347,7 +356,6 @@ async function applyAnimation(old, renew, index) {
 	await Promise.all(
 		rest.map((key) => {
 			ele[key].style.translate = '0 0';
-			ele[key].classList.remove('chosen');
 			return animate(ele[key], [
 				{
 					scale: 0,
@@ -375,7 +383,6 @@ function displayOperator(index, name) {
 		case 'pop':
 			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.8rem">Popcount</span>');
 			break;
-		case 'root':
 		case 'd':
 			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.8rem">の約数の数</span>');
 			break;
