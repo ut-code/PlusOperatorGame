@@ -4,7 +4,7 @@
 }
 
 :root {
-    font-size: min(1vh, 0.7vw);
+    font-size: min(1vh, 0.6vw);
 }
 
 body {
@@ -37,7 +37,7 @@ body {
     border-radius: 5rem;
     box-sizing: border-box;
 
-    width: 120rem;
+    width: 150rem;
     height: 30rem;
 
     display: grid;
@@ -46,7 +46,7 @@ body {
 }
 
 #hand {
-    width: 120rem;
+    width: 150rem;
     height: 20rem;
 
     display: grid;
@@ -54,7 +54,7 @@ body {
     justify-content: space-between;
 
     >div {
-        width: 58rem;
+        width: 73rem;
         height: 20rem;
 
         background-color: #eef;
@@ -81,7 +81,7 @@ body {
     justify-content: center;
     align-items: center;
 
-    transition: 0.1s scale ease-out, 0.1s border-color;
+    transition: 0.15s scale ease-out, 0.15s border-color linear, 0.15s background-color linear;
     will-change: translate, scale, opacity, border-color;
     backface-visibility: visible;
 
@@ -92,10 +92,13 @@ body {
         font-size: 6rem;
     }
 
-    &.chosen,
-    &#dummy {
+    &.chosen {
         border-color: #f99;
         scale: 1.2;
+    }
+
+    &.invalid {
+        background-color: #999;
     }
 }
 
