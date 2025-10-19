@@ -71,6 +71,7 @@ body {
     background-color: #fff;
     border: #99f 0.5rem solid;
     border-radius: 1rem;
+    box-sizing: border-box;
 
     width: 10rem;
     height: 12rem;
@@ -106,4 +107,23 @@ body {
 #dummy {
     position: absolute;
     display: none;
+}
+
+#clear {
+    position: absolute;
+    width: 60rem;
+    height: 40rem;
+    border-radius: 5rem;
+    background-color: #fffe;
+
+    /*opacity: 0;
+    scale: 0;*/
+    transition: 0.2s scale ease-out, 0.2s opacity linear;
+
+    will-change: opacity, scale;
+
+    &.open {
+        opacity: 1;
+        scale: 1;
+    }
 }

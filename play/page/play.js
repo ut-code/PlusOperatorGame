@@ -1,3 +1,16 @@
+class WeightRandom {
+	#weight;
+	constructor(weight) {
+		this.#weight = [...weight];
+		for (let i = 1; i < this.#weight.length; i++)
+			this.#weight[i] += this.#weight[i - 1];
+	}
+	get() {
+		const rand = Math.random() * this.#weight.at(-1);
+		return this.#weight.findIndex((v) => v > rand);
+	}
+}
+
 class State {
 	static oninit = () => { };
 	static onfocus = () => { };
@@ -147,13 +160,19 @@ class Op {
 class Game {
 	onapply = () => { };
 
-	constructor(level, calls) {
+	constructor(level) {
 		this.level = level;
+
+		this.opgen = new WeightRandom([
+			[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+			[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
+			[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+		][level]);
 
 		this.state = {
 			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
 			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
-			op: new State('op', 4, () => Math.floor(Math.random() * Op.list.length)),
+			op: new State('op', 4, () => this.opgen.get()),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -219,7 +238,7 @@ class Game {
 	}
 
 	get cleared() {
-		return this.value.field.find((value) => value != 1) === undefined;
+		return this.state.field.values.find((value) => value != 1) === undefined;
 	}
 }
 
@@ -287,7 +306,7 @@ async function applyAnimation(old, renew, index) {
 		})
 	);
 
-	await new Promise((resolve) => setTimeout(resolve, 300));
+	await new Promise((resolve) => setTimeout(resolve, 200));
 
 	// 両端のカード入れ替え
 	Object.assign(ele.dummy.style, {
@@ -373,7 +392,10 @@ async function applyAnimation(old, renew, index) {
 		ele[key].removeAttribute('style');
 	});
 
-	game.accept();
+	if (game.cleared) {
+		document.getElementById('clear').classList.add('open');
+	}
+	else game.accept();
 }
 
 function displayOperator(index, name) {
@@ -384,10 +406,10 @@ function displayOperator(index, name) {
 			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.8rem">Popcount</span>');
 			break;
 		case 'd':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.8rem">の約数の数</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.6rem">の約数の数</span>');
 			break;
 		case 'gcd':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.5rem">の最大公約数</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.4rem">の最大公約数</span>');
 			break;
 		default:
 			ele.textContent = {
@@ -399,7 +421,7 @@ function displayOperator(index, name) {
 	}
 }
 
-function start() {
+function start(level) {
 	State.oninit = (key, index, value) => {
 		if (key === 'op') displayOperator(index, Op.list[value].name);
 		else cards[key][index].textContent = `${value}`;
@@ -410,8 +432,10 @@ function start() {
 	State.onenabled = (key, index) => cards[key][index].classList.remove('invalid');
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
-	game = new Game(0);
+	document.getElementById('title').textContent = `Level ${level + 1}`;
+
+	game = new Game(level);
 	game.onapply = applyAnimation;
 }
 
-start();
+start(2);
