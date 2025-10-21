@@ -170,7 +170,7 @@ class Game {
 		][level]);
 
 		this.state = {
-			field: new State('field', 2, () => Math.floor(Math.random() * 18 + 2)),
+			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
 			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
 			op: new State('op', 4, () => this.opgen.get()),
 			apply: new State('apply', 1, () => '=')
@@ -286,11 +286,11 @@ async function startAnimation() {
 	await Promise.all(
 		[...cards.field].map((ele, i) => animate(ele, [
 			{
-				translate: `${(2.5 - i) * 10}rem -50rem`,
+				translate: `${(2.5 - i) * 10}rem -20rem 0`,
 				opacity: 0
 			},
 			{
-				translate: '0 0',
+				translate: '0 0 0',
 				opacity: 1
 			}
 		], 500))
@@ -348,7 +348,7 @@ async function applyAnimation(old, renew, index) {
 	await Promise.all(
 		keys.map((key, i) => {
 			return animate(ele[key], {
-				translate: `calc(50vw - ${center[key].x}px + ${arrange[key]}rem) calc(50vh - ${center[key].y}px)`,
+				translate: `calc(50vw - ${center[key].x}px + ${arrange[key]}rem) calc(50vh - ${center[key].y}px) 0`,
 				scale: (key === 'field' ? 2 / 3 : 1) * 1.5
 			}, 500);
 		})
@@ -361,13 +361,13 @@ async function applyAnimation(old, renew, index) {
 		display: 'flex',
 		left: `calc(50vw + ${arrange.field}rem) `,
 		top: `50vh`,
-		translate: '-50% -50%',
+		translate: '-50% -50% 0',
 		scale: 1.5
 	});
 	ele.dummy.textContent = ele.field.textContent;
 
 	ele.field.textContent = `${renew.field}`;
-	ele.field.style.translate = `calc(50vw - ${center.field.x}px + ${arrange.new_field}rem) calc(50vh - ${center.field.y}px)`;
+	ele.field.style.translate = `calc(50vw - ${center.field.x}px + ${arrange.new_field}rem) calc(50vh - ${center.field.y}px) 0`;
 
 	// 答えのカード出現
 	await animate(ele.field, [
@@ -388,10 +388,10 @@ async function applyAnimation(old, renew, index) {
 	animate(ele.field,
 		renew.field === 1
 			? {
-				translate: `calc(50vw - ${center.field.x}px + ${arrange.new_field}rem) calc(-50vh - ${center.field.y}px)`
+				translate: `calc(50vw - ${center.field.x}px + ${arrange.new_field}rem) calc(-50vh - ${center.field.y}px) 0`
 			}
 			: {
-				translate: '0 0',
+				translate: '0 0 0',
 				scale: 1
 			},
 		renew.field === 1 ? 700 : 500).then(() => {
@@ -422,7 +422,7 @@ async function applyAnimation(old, renew, index) {
 	// 手札のカードを再出現
 	await Promise.all(
 		rest.map((key) => {
-			ele[key].style.translate = '0 0';
+			ele[key].style.translate = '0 0 0';
 			return animate(ele[key], [
 				{
 					scale: 0,
