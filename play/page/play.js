@@ -170,13 +170,13 @@ class Game {
 		][level]);
 
 		this.state = {
-			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
+			field: new State('field', 2, () => Math.floor(Math.random() * 18 + 2)),
 			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
 			op: new State('op', 4, () => this.opgen.get()),
 			apply: new State('apply', 1, () => '=')
 		};
 
-		this.input = true;
+		this.input = false;
 	}
 
 	apply() {
@@ -249,7 +249,7 @@ const cards = {
 	op: document.querySelectorAll('#op>.card'),
 	num: document.querySelectorAll('#num>.card'),
 	apply: document.querySelectorAll('#apply'),
-	dummy: document.getElementById('dummy')
+	dummy: document.querySelectorAll('#dummy')
 };
 
 for (const key in cards) {
@@ -273,9 +273,57 @@ async function animate(ele, keyframes, duration) {
 	anime.cancel();
 }
 
-async function applyAnimation(old, renew, index) {
-	game.block();
+async function startAnimation() {
+	[...cards.field].forEach((ele) => {
+		ele.classList.remove('display');
+		ele.style.opacity = 0;
+	});
+	[...cards.op].forEach((ele) => ele.style.opacity = 0);
+	[...cards.num].forEach((ele) => ele.style.opacity = 0);
 
+	await new Promise((resolve) => setTimeout(resolve, 200));
+
+	await Promise.all(
+		[...cards.field].map((ele, i) => animate(ele, [
+			{
+				translate: `${(2.5 - i) * 10}rem -50rem`,
+				opacity: 0
+			},
+			{
+				translate: '0 0',
+				opacity: 1
+			}
+		], 500))
+	);
+
+	await Promise.all([
+		...[...cards.op].map((ele, i) => animate(ele, [
+			{
+				scale: 0,
+				opacity: 0
+			},
+			{
+				scale: 1,
+				opacity: 1
+			}
+		], 500)),
+		...[...cards.num].map((ele, i) => animate(ele, [
+			{
+				scale: 0,
+				opacity: 0
+			},
+			{
+				scale: 1,
+				opacity: 1
+			}
+		], 500)),
+	]);
+
+	[...cards.op].forEach((ele) => ele.removeAttribute('style'));
+	[...cards.num].forEach((ele) => ele.removeAttribute('style'));
+}
+
+async function applyAnimation(old, renew, index) {
 	const getCenter = (ele) => {
 		const rect = ele.getBoundingClientRect();
 		return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -288,7 +336,7 @@ async function applyAnimation(old, renew, index) {
 	const ele = keys.reduce((acc, key) => ({ ...acc, [key]: cards[key][index[key]] }), { apply: cards.apply[0] });
 	const center = Object.keys(ele).reduce((acc, key) => ({ ...acc, [key]: getCenter(ele[key]) }), {});
 
-	ele.dummy = cards.dummy;
+	ele.dummy = cards.dummy[0];
 
 	for (const key of keys) {
 		ele[key].style.zIndex = 1;
@@ -393,9 +441,10 @@ async function applyAnimation(old, renew, index) {
 	});
 
 	if (game.cleared) {
-		document.getElementById('clear').classList.add('open');
+		const modal = document.getElementById('clear');
+		modal.style.opacity = 1;
+		modal.style.scale = 1;
 	}
-	else game.accept();
 }
 
 function displayOperator(index, name) {
@@ -421,7 +470,7 @@ function displayOperator(index, name) {
 	}
 }
 
-function start(level) {
+function init() {
 	State.oninit = (key, index, value) => {
 		if (key === 'op') displayOperator(index, Op.list[value].name);
 		else cards[key][index].textContent = `${value}`;
@@ -432,10 +481,31 @@ function start(level) {
 	State.onenabled = (key, index) => cards[key][index].classList.remove('invalid');
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
+	document.getElementById('retry').addEventListener('click', () => start(2));
+	document.getElementById('return').addEventListener('click', () => location.replace('../../home/page/home.html'));
+}
+
+async function start(level) {
+	for (const key in cards)
+		for (const card of cards[key])
+			card.removeAttribute('style');
+	document.getElementById('clear').removeAttribute('style');
+
 	document.getElementById('title').textContent = `Level ${level + 1}`;
 
 	game = new Game(level);
-	game.onapply = applyAnimation;
+
+	game.onapply = async (...args) => {
+		game.block();
+
+		await applyAnimation(...args);
+
+		if (!game.cleared) game.accept();
+	};
+
+	await startAnimation();
+	game.accept();
 }
 
-start(2);
+init();
+start(1);

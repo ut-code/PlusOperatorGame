@@ -113,8 +113,8 @@ body {
 
 #clear {
     position: absolute;
-    width: 60rem;
-    height: 40rem;
+    width: 70rem;
+    height: 50rem;
     border-radius: 5rem;
     background-color: #fffe;
 
@@ -124,8 +124,32 @@ body {
 
     will-change: opacity, scale;
 
-    &.open {
-        opacity: 1;
-        scale: 1;
+    #clear-head {
+        color: #333;
+        font-size: 10rem;
+        text-align: center;
+    }
+
+    #buttons {
+        display: grid;
+        grid-auto-flow: column;
+        place-items: center;
+
+        div {
+            text-align: center;
+            font-size: 4rem;
+            border: 0.5rem solid;
+            border-radius: 2rem;
+            width: 80%;
+            cursor: pointer;
+
+            &#retry {
+                border-color: #f33;
+            }
+
+            &#return {
+                border-color: #33f;
+            }
+        }
     }
 }
