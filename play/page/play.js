@@ -163,11 +163,7 @@ class Game {
 	constructor(level) {
 		this.level = level;
 
-		this.opgen = new WeightRandom([
-			[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-			[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
-			[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-		][level]);
+		this.opgen = new WeightRandom(getOpPriority(level));
 
 		this.state = {
 			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
@@ -468,6 +464,15 @@ function displayOperator(index, name) {
 			}[name];
 			break;
 	}
+}
+
+function getOpPriority(level) {
+	// Op.listの順番に重みづけ
+	return [
+		[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+		[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+	][level]
 }
 
 function init() {
