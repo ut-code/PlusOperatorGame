@@ -1,6 +1,155 @@
-#hand-number-board, #hand-operator-board {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px; /* カード間の隙間 */
-  padding: 16px; /* ボードの内側の余白 */
+* {
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    font-size: min(1vh, 0.6vw);
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    user-select: none;
+    overflow: hidden;
+}
+
+#title {
+    font-size: 8rem;
+}
+
+#area {
+    background-color: #ddf;
+    width: 100vw;
+    height: 100rem;
+
+    display: grid;
+    place-items: center;
+}
+
+#field {
+    background-color: #eef;
+    border-radius: 5rem;
+    box-sizing: border-box;
+
+    width: 150rem;
+    height: 30rem;
+
+    display: grid;
+    grid-auto-flow: column;
+    place-items: center;
+}
+
+#hand {
+    width: 150rem;
+    height: 20rem;
+
+    display: grid;
+    grid-auto-flow: column;
+    justify-content: space-between;
+
+    >div {
+        width: 73rem;
+        height: 20rem;
+
+        background-color: #eef;
+        border-radius: 3rem;
+        box-sizing: border-box;
+
+        display: grid;
+        grid-auto-flow: column;
+        place-items: center;
+    }
+}
+
+.card {
+    background-color: #fff;
+    border: #99f 0.5rem solid;
+    border-radius: 1rem;
+    box-sizing: border-box;
+
+    width: 10rem;
+    height: 12rem;
+
+    font-size: 4rem;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    transition: 0.15s scale ease-out, 0.15s border-color linear, 0.15s background-color linear;
+    will-change: translate, scale, opacity, border-color;
+    backface-visibility: visible;
+
+    #field & {
+        width: 15rem;
+        height: 18rem;
+        border-width: 0.75rem;
+        border-radius: 1.5rem;
+
+        font-size: 6rem;
+    }
+
+    &.chosen,
+    &.display {
+        border-color: #f99;
+        scale: 1.2;
+    }
+
+    &.invalid {
+        background-color: #999;
+    }
+}
+
+#dummy {
+    position: absolute;
+    display: none;
+}
+
+#clear {
+    position: absolute;
+    width: 70rem;
+    height: 50rem;
+    border-radius: 5rem;
+    background-color: #fffe;
+
+    opacity: 0;
+    scale: 0;
+    transition: 0.2s scale ease-out, 0.2s opacity linear;
+
+    will-change: opacity, scale;
+
+    #clear-head {
+        color: #333;
+        font-size: 10rem;
+        text-align: center;
+    }
+
+    #buttons {
+        display: grid;
+        grid-auto-flow: column;
+        place-items: center;
+
+        div {
+            text-align: center;
+            font-size: 4rem;
+            border: 0.5rem solid;
+            border-radius: 2rem;
+            width: 80%;
+            cursor: pointer;
+
+            &#retry {
+                border-color: #f33;
+            }
+
+            &#return {
+                border-color: #33f;
+            }
+        }
+    }
 }
