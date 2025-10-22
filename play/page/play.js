@@ -324,7 +324,7 @@ async function applyAnimation(old, renew, index) {
 	const getCenter = (ele) => {
 		const rect = ele.getBoundingClientRect();
 		return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-	}
+	};
 
 	const arrange = old.op.getArrange(old.field, old.num);
 	const keys = Object.keys(arrange).filter((v) => v != 'new_field');
@@ -473,7 +473,7 @@ function getOpPriority(level) {
 		[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
 		[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-	][level]
+	][level];
 }
 
 function init() {
