@@ -1,22 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Play Game</title>
-  <link rel="stylesheet" href="play.css">
-  <link rel="stylesheet" href="../components/card/card.css">
-</head>
-<body>
-  <h1>Plus Operator Game</h1>
-  <div id="hand-number-board">
-    <!-- Card components will be loaded here -->
-  </div>
-  <div id="hand-operator-board">
-    <!-- Card components will be loaded here -->
-  </div>
+<html lang="ja">
 
-  <script src="../components/card/card.js"></script>
-  <script src="play.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plus Operator Game</title>
+    <link rel="stylesheet" href="play.css">
+</head>
+
+<body>
+    <div id="area">
+        <div id="title">Level 1</div>
+        <div id="field">
+            <div class="card"></div>
+            <div class="card"></div>
+            <div class="card"></div>
+            <div class="card"></div>
+            <div class="card"></div>
+            <div class="card"></div>
+        </div>
+        <div id="hand">
+            <div id="op">
+                <div class="card"></div>
+                <div class="card"></div>
+                <div class="card"></div>
+                <div class="card"></div>
+            </div>
+            <div id="num">
+                <div class="card"></div>
+                <div class="card"></div>
+                <div class="card"></div>
+                <div class="card"></div>
+            </div>
+        </div>
+        <div id="apply" class="card invalid">=</div>
+        <div id="dummy" class="card display"></div>
+    </div>
+    <div id="clear">
+        <div id="clear-head">Clear!!</div>
+        <div id="buttons">
+            <div id="return">もどる</div>
+            <div id="retry">もう一回</div>
+        </div>
+    </div>
+    <script src="play.js"></script>
 </body>
+
 </html>
