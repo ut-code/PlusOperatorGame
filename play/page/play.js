@@ -258,9 +258,10 @@ for (const key in cards) {
 		});
 }
 
-async function animate(ele, keyframes, duration) {
+async function animate(ele, keyframes, duration, delay = 0) {
 	const anime = ele.animate(keyframes, {
 		duration,
+		delay,
 		fill: 'forwards',
 		easing: 'ease-in-out'
 	});
@@ -289,7 +290,7 @@ async function startAnimation() {
 				translate: '0 0 0',
 				opacity: 1
 			}
-		], 500))
+		], 500, i * 20))
 	);
 
 	await Promise.all([
@@ -302,7 +303,7 @@ async function startAnimation() {
 				scale: 1,
 				opacity: 1
 			}
-		], 500)),
+		], 500, i * 20)),
 		...[...cards.num].map((ele, i) => animate(ele, [
 			{
 				scale: 0,
@@ -312,7 +313,7 @@ async function startAnimation() {
 				scale: 1,
 				opacity: 1
 			}
-		], 500)),
+		], 500, (i + cards.op.length) * 20)),
 	]);
 
 	[...cards.op].forEach((ele) => ele.removeAttribute('style'));
