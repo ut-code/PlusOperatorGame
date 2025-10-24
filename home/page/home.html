@@ -4,38 +4,38 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Plus Operator Game</title>
-        <link rel="stylesheet" href="home.css">
+        <link rel="stylesheet" href="/home/page/home.css">
     </head>
     <main>
         <h1> Plus Operator Game</h1>
         <h3> Game mode</h3>
         <div class="radio-group">
             <div>
-                <input type="radio" id="rule1" name="rules" value="10q">
+                <input type="radio" id="rule1" name="rules" value="solo" checked>
                 <label for="rule1">Solo Play</label>
             </div>
             <div>
-                <input type="radio"id="rule2" name="rules" value="30q" checked disabled>
+                <input type="radio" id="rule2" name="rules" value="battle" disabled>
                 <label for="rule2">Battle Mode</label>
             </div>
         </div>
         <h3> Rules</h3>
         <div class="radio-group">
             <div>
-                <input type="radio" id="easy" name="game-mode" value="easy">
+                <input type="radio" id="easy" name="game-level" value="easy">
                 <label for="easy">Easy - 四則演算</label>
             </div>
             <div>
-                <input type="radio" id="normal" name="game-mode" value="normal" checked>
+                <input type="radio" id="normal" name="game-level" value="normal" checked>
                 <label for="normal">Normal - 数学</label>
             </div>
             <div>
-                <input type="radio" id="hard" name="game-mode" value="hard">
+                <input type="radio" id="hard" name="game-level" value="hard">
                 <label for="hard">Hard - Bit演算</label>
             </div>
         </div>
         <div><button id="start-button">Start</button></div>
-        <script src="home.js"></script>
+        <script src="/home/page/home.js"></script>
     </main>
 
 </html>
