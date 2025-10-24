@@ -18,14 +18,14 @@ class State {
 	static onenabled = () => { };
 	static ondisabled = () => { };
 
-	constructor(key, n, create) {
+	constructor(key, n, create, game) {
 		this.key = key;
 		this.values = [...Array(n)].map(() => create());
 		this.valid = Array(n).fill(true);
 		this.chosen = -1;
 		this.create = create;
 
-		this.values.forEach((value, index) => State.oninit(this.key, index, value));
+		this.values.forEach((value, index) => State.oninit(this.key, index, value, game));
 	}
 	get value() {
 		if (this.chosen === -1) return null;
@@ -163,11 +163,11 @@ class Game {
 	constructor(level) {
 		this.level = level;
 
-		this.opgen = new WeightRandom([
-			[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-			[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
-			[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-		][level]);
+		// this.opgen = new WeightRandom([
+		// 	[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+		// 	[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
+		// 	[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+		// ][level]);
 
 		const easyOps = ['add', 'sub', 'mul', 'div'];
 		const normalOps = ['rem','root','d','gcd'];
@@ -193,7 +193,7 @@ class Game {
 		this.state = {
 			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
 			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
-			op: new State('op', 4, () => Math.floor(Math.random() * this.ops.length)),
+			op: new State('op', 4, () => Math.floor(Math.random() * this.ops.length), this),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -270,7 +270,7 @@ const cards = {
 	op: document.querySelectorAll('#op>.card'),
 	num: document.querySelectorAll('#num>.card'),
 	apply: document.querySelectorAll('#apply'),
-	dummy: document.querySelectorAll('#dummy')
+	dummy: document.querySelector('#dummy')
 };
 
 for (const key in cards) {
@@ -357,7 +357,7 @@ async function applyAnimation(old, renew, index) {
 	const ele = keys.reduce((acc, key) => ({ ...acc, [key]: cards[key][index[key]] }), { apply: cards.apply[0] });
 	const center = Object.keys(ele).reduce((acc, key) => ({ ...acc, [key]: getCenter(ele[key]) }), {});
 
-	ele.dummy = cards.dummy[0];
+	ele.dummy = cards.dummy;
 
 	for (const key of keys) {
 		ele[key].style.zIndex = 1;
@@ -492,8 +492,12 @@ function displayOperator(index, name) {
 }
 
 function init() {
-	State.oninit = (key, index, value) => {
-		if (key === 'op') displayOperator(index, game.ops[value].name);
+	State.oninit = (key, index, value, game) => {
+		if (key === 'op') {
+			if (game && game.ops[value]) {
+				displayOperator(index, game.ops[value].name);
+			}
+		}
 		else cards[key][index].textContent = `${value}`;
 	}
 
@@ -507,9 +511,11 @@ function init() {
 }
 
 async function start(level) {
-	for (const key in cards)
+	for (const key in cards) {
+		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
 		for (const card of cards[key])
 			card.removeAttribute('style');
+	}
 	document.getElementById('clear').removeAttribute('style');
 
 	document.getElementById('title').textContent = `Level ${level}`;
@@ -528,8 +534,9 @@ async function start(level) {
 	game.accept();
 }
 
+var game;
 init();
 const params = new URLSearchParams(window.location.search);
-const level = params.get('level');
+const level = params.get('level') || 'easy';
 const rule = params.get('rule');
 start(level);
