@@ -1,6 +1,8 @@
+// 演算選択用の重み付き乱数
 class WeightRandom {
 	#weight;
 	constructor(weight) {
+		// weight: 各添え字の値の重み
 		this.#weight = [...weight];
 		for (let i = 1; i < this.#weight.length; i++)
 			this.#weight[i] += this.#weight[i - 1];
@@ -11,6 +13,7 @@ class WeightRandom {
 	}
 }
 
+// 手札・場のカードの状態管理
 class State {
 	static oninit = () => { };
 	static onfocus = () => { };
@@ -27,20 +30,24 @@ class State {
 
 		this.values.forEach((value, index) => State.oninit(this.key, index, value));
 	}
+	// 選択中の値 or null
 	get value() {
 		if (this.chosen === -1) return null;
 		return this.values[this.chosen];
 	}
+	// 選択中の値と添え字
 	get info() {
 		return {
 			value: this.value,
 			index: this.chosen
 		};
 	}
+	// 新しい値で埋める
 	make(value) {
 		if (this.chosen === -1) return;
 		this.values[this.chosen] = value ?? this.create();
 	}
+	// n番目を選択状態に
 	focus(n) {
 		if (n === this.chosen) n = -1;
 		if (n !== -1 && !this.valid[n]) return;
@@ -57,6 +64,7 @@ class State {
 		if (n === -1) return;
 		State.onunfocus(this.key, n);
 	}
+	// isValid(value)がtrueのカードのみ有効にする
 	filter(isValid) {
 		this.values.forEach((value, i) => {
 			const valid = isValid ? isValid(value) : true;
@@ -76,7 +84,13 @@ class State {
 
 const gcd = (a, b) => a % b ? gcd(b, a % b) : b;
 
+// 演算子の定義をまとめる
 class Op {
+	// [演算子名, 演算関数(field, param), {
+	//     wrap: カード配置を変更する場合のラッパー,
+	//     isFValid: 場のカードが有効か判定する,
+	//     isPValid: 手札の数字カードが有効か判定する
+	//}]
 	static list = [
 		new Op('add', (f, p) => f + p),
 		new Op('sub', (f, p) => Math.abs(f - p), {
@@ -137,6 +151,7 @@ class Op {
 		this.isPValid = this.r_param ? (option.isPValid ?? (() => true)) : () => false;
 		this.wrap = option.wrap ?? (() => { });
 	}
+	//カードが中央に集まるときの配置を設定
 	getArrange(f, p) {
 		const arr = this.r_param
 			? {
@@ -163,11 +178,7 @@ class Game {
 	constructor(level) {
 		this.level = level;
 
-		this.opgen = new WeightRandom([
-			[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-			[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
-			[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-		][level]);
+		this.opgen = new WeightRandom(getOpPriority(level));
 
 		this.state = {
 			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
@@ -179,6 +190,7 @@ class Game {
 		this.input = false;
 	}
 
+	// 演算開始
 	apply() {
 		if (!this.input || !this.valid) return;
 
@@ -203,6 +215,7 @@ class Game {
 		this.state.num.focus(-1);
 	}
 
+	// カード選択を有効化 / 無効化
 	accept() {
 		this.input = true;
 	}
@@ -210,6 +223,7 @@ class Game {
 		this.input = false;
 	}
 
+	// 演算を開始できるか
 	get valid() {
 		if (this.state.field.value === null) return false;
 		if (this.state.op.value === null) return false;
@@ -262,9 +276,10 @@ for (const key in cards) {
 		});
 }
 
-async function animate(ele, keyframes, duration) {
+async function animate(ele, keyframes, duration, delay = 0) {
 	const anime = ele.animate(keyframes, {
 		duration,
+		delay,
 		fill: 'forwards',
 		easing: 'ease-in-out'
 	});
@@ -293,7 +308,7 @@ async function startAnimation() {
 				translate: '0 0 0',
 				opacity: 1
 			}
-		], 500))
+		], 500, i * 20))
 	);
 
 	await Promise.all([
@@ -306,7 +321,7 @@ async function startAnimation() {
 				scale: 1,
 				opacity: 1
 			}
-		], 500)),
+		], 500, i * 20)),
 		...[...cards.num].map((ele, i) => animate(ele, [
 			{
 				scale: 0,
@@ -316,7 +331,7 @@ async function startAnimation() {
 				scale: 1,
 				opacity: 1
 			}
-		], 500)),
+		], 500, (i + cards.op.length) * 20)),
 	]);
 
 	[...cards.op].forEach((ele) => ele.removeAttribute('style'));
@@ -327,7 +342,7 @@ async function applyAnimation(old, renew, index) {
 	const getCenter = (ele) => {
 		const rect = ele.getBoundingClientRect();
 		return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-	}
+	};
 
 	const arrange = old.op.getArrange(old.field, old.num);
 	const keys = Object.keys(arrange).filter((v) => v != 'new_field');
@@ -468,6 +483,16 @@ function displayOperator(index, name) {
 			}[name];
 			break;
 	}
+}
+
+// 演算子の優先順位
+function getOpPriority(level) {
+	// Op.listの順番に重みづけ
+	return [
+		[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+		[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
+		[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+	][level];
 }
 
 function init() {
