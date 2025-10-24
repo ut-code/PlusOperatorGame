@@ -169,10 +169,31 @@ class Game {
 			[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
 		][level]);
 
+		const easyOps = ['add', 'sub', 'mul', 'div'];
+		const normalOps = ['rem','root','d','gcd'];
+		const hardOps = ['and', 'or', 'xor', 'pop'];
+
+		let enabledOps =[];
+		switch(level) {
+			case 'easy':
+				enabledOps = easyOps;
+				break;
+			case 'normal':
+				enabledOps = [...easyOps, ...normalOps];
+				break;
+			case 'hard':
+				enabledOps = [...easyOps, ...normalOps, ...hardOps];
+				break;
+			default:
+				enabledOps = easyOps;
+		}
+
+		this.ops = Op.list.filter(op => enabledOps.includes(op.name));
+
 		this.state = {
 			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
 			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
-			op: new State('op', 4, () => this.opgen.get()),
+			op: new State('op', 4, () => Math.floor(Math.random() * this.ops.length)),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -188,12 +209,12 @@ class Game {
 
 		this.state.num.filter(() => true);
 
-		this.state.field.make(Op.list[op].calc(field, num));
+		this.state.field.make(this.ops[op].calc(field, num));
 		this.state.op.make();
 		this.state.num.make();
 
 		this.onapply(
-			{ field, op: Op.list[op], num },
+			{ field, op: this.ops[op], num },
 			{ field: this.state.field.value, op: this.state.op.value, num: this.state.num.value },
 			{ field: this.state.field.chosen, op: this.state.op.chosen, num: this.state.num.chosen, apply: 0 }
 		);
@@ -213,7 +234,7 @@ class Game {
 	get valid() {
 		if (this.state.field.value === null) return false;
 		if (this.state.op.value === null) return false;
-		if (!Op.list[this.state.op.value].r_param) return true;
+		if (!this.ops[this.state.op.value].r_param) return true;
 		return this.state.num.value !== null;
 	}
 
@@ -226,8 +247,8 @@ class Game {
 				break;
 			case 'op':
 				this.state.op.focus(index);
-				this.state.field.filter(Op.list[this.state.op.value]?.isFValid);
-				this.state.num.filter(Op.list[this.state.op.value]?.isPValid);
+				this.state.field.filter(this.ops[this.state.op.value]?.isFValid);
+				this.state.num.filter(this.ops[this.state.op.value]?.isPValid);
 				break;
 			case 'num':
 				this.state.num.focus(index);
@@ -414,7 +435,7 @@ async function applyAnimation(old, renew, index) {
 	for (const key of rest)
 		ele[key].classList.remove('display');
 
-	displayOperator(index.op, Op.list[renew.op].name);
+	displayOperator(index.op, game.ops[renew.op].name);
 	if (index.num !== -1) ele.num.textContent = `${renew.num}`;
 
 	ele.apply.classList.add('invalid');
@@ -472,7 +493,7 @@ function displayOperator(index, name) {
 
 function init() {
 	State.oninit = (key, index, value) => {
-		if (key === 'op') displayOperator(index, Op.list[value].name);
+		if (key === 'op') displayOperator(index, game.ops[value].name);
 		else cards[key][index].textContent = `${value}`;
 	}
 
@@ -491,7 +512,7 @@ async function start(level) {
 			card.removeAttribute('style');
 	document.getElementById('clear').removeAttribute('style');
 
-	document.getElementById('title').textContent = `Level ${level + 1}`;
+	document.getElementById('title').textContent = `Level ${level}`;
 
 	game = new Game(level);
 
@@ -508,4 +529,7 @@ async function start(level) {
 }
 
 init();
-start(1);
+const params = new URLSearchParams(window.location.search);
+const level = params.get('level');
+const rule = params.get('rule');
+start(level);
