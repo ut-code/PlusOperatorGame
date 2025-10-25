@@ -175,13 +175,13 @@ class Game {
 
 		let enabledOps =[];
 		switch(level) {
-			case 'easy':
+			case 'Easy':
 				enabledOps = easyOps;
 				break;
-			case 'normal':
+			case 'Normal':
 				enabledOps = [...easyOps, ...normalOps];
 				break;
-			case 'hard':
+			case 'Hard':
 				enabledOps = [...easyOps, ...normalOps, ...hardOps];
 				break;
 			default:
@@ -226,9 +226,11 @@ class Game {
 
 	accept() {
 		this.input = true;
+		document.body.classList.remove('is-animating');
 	}
 	block() {
 		this.input = false;
+		document.body.classList.add('is-animating');
 	}
 
 	get valid() {
