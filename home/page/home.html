@@ -4,38 +4,52 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Plus Operator Game</title>
-        <link rel="stylesheet" href="home.css">
-    </head>
-    <main>
-        <h1> Plus Operator Game</h1>
-        <h3> Game mode</h3>
-        <div class="radio-group">
-            <div>
-                <input type="radio" id="rule1" name="rules" value="10q">
-                <label for="rule1">Solo Play</label>
-            </div>
-            <div>
-                <input type="radio"id="rule2" name="rules" value="30q" checked disabled>
-                <label for="rule2">Battle Mode</label>
-            </div>
-        </div>
-        <h3> Rules</h3>
-        <div class="radio-group">
-            <div>
-                <input type="radio" id="easy" name="game-mode" value="easy">
-                <label for="easy">Easy - 四則演算</label>
-            </div>
-            <div>
-                <input type="radio" id="normal" name="game-mode" value="normal" checked>
-                <label for="normal">Normal - 数学</label>
-            </div>
-            <div>
-                <input type="radio" id="hard" name="game-mode" value="hard">
-                <label for="hard">Hard - Bit演算</label>
-            </div>
-        </div>
-        <div><button>Start</button></div>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto:wght@500;700&display=swap" rel="stylesheet">
         
-    </main>
+        <link rel="stylesheet" href="/home/page/home.css">
+    </head>
+    <body>
+        <main>
+            <h1> Plus Operator Game</h1>
+            
+            <div class="card">
+                <h3> Game mode</h3>
+                <div class="radio-group">
+                    <input type="radio" id="rule1" name="rules" value="solo" checked>
+                    <label for="rule1">👤 Solo Play</label>
+                    
+                    <input type="radio" id="rule2" name="rules" value="battle" disabled>
+                    <label for="rule2">⚔️ Battle Mode</label>
+                </div>
+            </div>
 
+            <div class="card">
+                <h3> Rules</h3>
+                <div class="radio-group">
+                    <input type="radio" id="easy" name="game-level" value="Easy">
+                    <label for="easy" class="label-vertical">
+                        <span class="icon-text arithmetics">+-×÷</span>
+                         Easy - 四則演算
+                    </label>
+                    
+                    <input type="radio" id="normal" name="game-level" value="Normal" checked>
+                    <label for="normal" class="label-vertical">
+                        <span class="icon-text">X+Y<br>X-Y</span>
+                        <span>Normal - 数学</span>
+                    </label>
+                    
+                    <input type="radio" id="hard" name="game-level" value="Hard">
+                    <label for="hard" class="label-vertical">
+                        <span class="icon-text">0101<br>0101</span>
+                        <span>Hard - Bit演算</span>
+                    </label>
+                </div>
+            </div>
+
+            <div><button id="start-button">Start</button></div>
+            <script src="/home/page/home.js"></script>
+        </main>
+    </body>
 </html>
