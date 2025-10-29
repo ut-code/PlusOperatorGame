@@ -162,7 +162,7 @@ class Game {
 
 	constructor(level) {
 		this.level = level;
-
+		this.moves = 0;
 		this.opgen = new WeightRandom([
 			[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
 			[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
@@ -201,6 +201,7 @@ class Game {
 		this.state.field.focus(-1);
 		this.state.op.focus(-1);
 		this.state.num.focus(-1);
+		this.moves++;
 	}
 
 	accept() {
@@ -442,6 +443,8 @@ async function applyAnimation(old, renew, index) {
 
 	if (game.cleared) {
 		const modal = document.getElementById('clear');
+		const movesDisplay = document.getElementById('clear-moves');
+		movesDisplay.textContent = `手数：${game.moves} 回`;
 		modal.style.opacity = 1;
 		modal.style.scale = 1;
 	}
