@@ -1,15 +1,14 @@
+/* 基本スタイルとフォント、背景色の設定 */
 html, body {
     width: 100%;
     margin: 0;
     padding: 0;
-}
-
-.radio-group {
-    display: flex;
-   
-    align-items: center;
-    justify-content: center;
-    gap: 20px; /* 選択肢の間の隙間 */
+    /* 生成画像の背景色に近い色に変更 */
+    background-color: #f0f8ff; 
+    /* Google Fonts でインポートしたフォントを指定 */
+    font-family: 'Roboto', 'Noto Sans JP', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 main {
@@ -19,4 +18,155 @@ main {
     width: 100%;
     padding: 20px;
     font-size: 25px;
+}
+
+.label-vertical .icon-text.arithmetics {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* h1, h3 のスタイル調整 */
+h1 {
+    font-size: 2.5rem; /* 3remから少し調整 */
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 30px;
+}
+
+h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 15px;
+    /* カード内で左揃えにするため */
+    width: 100%;
+    text-align: left;
+}
+
+/* カードデザインの追加 */
+.card {
+    background-color: #ffffff;
+    border-radius: 16px; /* 角丸を強めに */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 柔らかい影 */
+    padding: 25px;
+    width: 90%; /* 幅を少し広めに */
+    max-width: 600px;
+    margin-bottom: 25px;
+    box-sizing: border-box;
+    /* 内部要素の配置のため */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.radio-group {
+    display: flex;
+    flex-wrap: wrap; /* スマホなどで折り返すように */
+    align-items: center;
+    justify-content: center;
+    gap: 15px; /* 隙間を少し調整 */
+    width: 100%;
+}
+
+/* ラジオボタン本体を非表示にする */
+.radio-group input[type="radio"] {
+    display: none;
+}
+
+/* label をボタン風にスタイリング */
+.radio-group label {
+    display: inline-flex; /* アイコンとテキストを中央揃え */
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    border-radius: 50px; /* 画像のような楕円形 */
+    border: 2px solid #e0e0e0;
+    background-color: #f8f8f8;
+    color: #555;
+    font-size: 1rem; /* 25pxから調整 */
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 150px; /* ボタンの最小幅を確保 */
+    box-sizing: border-box;
+    text-align: center;
+}
+
+/* ホバー時（無効でない場合）のスタイル */
+.radio-group input[type="radio"]:not(:disabled) + label:hover {
+    border-color: #00c78a;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+}
+
+/* 選択時 (checked) のスタイル */
+.radio-group input[type="radio"]:checked + label {
+    background-color: #00c78a; /* 画像のミントグリーン */
+    color: #ffffff;
+    border-color: #00c78a;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(0, 199, 138, 0.4);
+}
+
+/* 無効時 (disabled) のスタイル */
+.radio-group input[type="radio"]:disabled + label {
+    background-color: #e0e0e0; /* 画像のグレー */
+    color: #999;
+    border-color: #d0d0d0;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* "Rules" の縦積みラベル用スタイル */
+
+.label-vertical {
+    flex-direction: column;
+    gap: 8px;
+    padding: 15px 20px;
+    min-width: 160px; /* 幅を少し調整 */
+}
+
+.label-vertical .icon-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #888; /* アイコンテキストの色を少し薄く */
+}
+.label-vertical .icon-text .arithmetics{
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* 選択時はアイコンテキストの色も変える */
+.radio-group input[type="radio"]:checked + .label-vertical .icon-text {
+    color: #ffffff;
+}
+
+/* Startボタンのスタイル */
+#start-button {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: #00c78a;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 50px; /* 大きさを調整 */
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 199, 138, 0.4);
+}
+
+#start-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 15px rgba(0, 199, 138, 0.5);
+}
+
+#start-button:active {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 199, 138, 0.3);
 }
