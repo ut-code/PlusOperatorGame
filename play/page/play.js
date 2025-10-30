@@ -178,28 +178,23 @@ class Game {
 	constructor(level) {
 		this.level = level;
 		this.moves = 0;
-		
+
 
 		this.opgen = new WeightRandom(getOpPriority(level));
-		// this.opgen = new WeightRandom([
-		// 	[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-		// 	[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
-		// 	[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-		// ][level]);
 
 		const easyOps = ['add', 'sub', 'mul', 'div'];
-		const normalOps = ['rem','root','d','gcd'];
+		const normalOps = ['rem', 'root', 'd', 'gcd'];
 		const hardOps = ['and', 'or', 'xor', 'pop'];
 
-		let enabledOps =[];
-		switch(level) {
-			case 'Easy':
+		let enabledOps = [];
+		switch (level) {
+			case 'easy':
 				enabledOps = easyOps;
 				break;
-			case 'Normal':
+			case 'normal':
 				enabledOps = [...easyOps, ...normalOps];
 				break;
-			case 'Hard':
+			case 'hard':
 				enabledOps = [...easyOps, ...normalOps, ...hardOps];
 				break;
 			default:
@@ -521,11 +516,16 @@ function displayOperator(index, name) {
 // 演算子の優先順位
 function getOpPriority(level) {
 	// Op.listの順番に重みづけ
-	return [
-		[1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-		[1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
-		[1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-	][level];
+	switch (level) {
+		case 'easy':
+			return [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+		case 'normal':
+			return [1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1];
+		case 'hard':
+			return [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0];
+		default:
+			return [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0];
+	}
 }
 
 function init() {
@@ -555,7 +555,7 @@ async function start(level) {
 	}
 	document.getElementById('clear').removeAttribute('style');
 
-	document.getElementById('title').textContent = `Level ${level}`;
+	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)}`;
 
 	game = new Game(level);
 
