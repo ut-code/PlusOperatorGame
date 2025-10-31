@@ -119,12 +119,12 @@ body {
         scale: 1.2;
     }
 
-    &:not(.invalid):hover {
+    &:not(.invalid):not(#enemy_hand &):hover {
         transform: translateY(-0.5rem);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
     }
 
-    &:not(.invalid):not(.chosen):hover {
+    &:not(.invalid):not(.chosen):not(#enemy_hand &):hover {
         border-color: #00c78a;
     }
 

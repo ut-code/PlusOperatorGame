@@ -302,14 +302,15 @@ class Game {
 
 var game;
 
+// 対戦相手の手を設定
 function moveCPU() {
 	return {
 		op: {
-			index: 4,
-			type: 0
+			index: Math.floor((Math.random() + 1) * OP_COUNT),
+			type: 8
 		},
 		num: {
-			index: 4,
+			index: -1,//Math.floor((Math.random() + 1) * NUM_COUNT),
 			value: 0
 		},
 		field: {
@@ -564,6 +565,8 @@ async function applyAnimation(old, renew, index, user = true) {
 
 async function applyCPUAnimation() {
 	const move = moveCPU();
+	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type];
+	game.state.op.values[move.op.index] = move.op.type;
 
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	game.click('field', move.field.index);
@@ -571,11 +574,12 @@ async function applyCPUAnimation() {
 	displayOperator(move.op.index, game.ops[move.op.type].name, false);
 	game.click('op', move.op.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
-	displayNumber(move.num.index, move.num.value, false)
-	game.click('num', move.num.index);
-	await new Promise((resolve) => setTimeout(resolve, 800));
+	if (op.r_param) {
+		displayNumber(move.num.index, move.num.value, false)
+		game.click('num', move.num.index);
+		await new Promise((resolve) => setTimeout(resolve, 800));
+	}
 
-	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type]
 	game.state.field.values[move.field.index] = op.calc(field_value, move.num.value);
 
 	game.state.field.focus(-1);
