@@ -23,11 +23,16 @@ body {
 }
 
 #title {
+    position: absolute;
+    top: 2rem;
+    right: 4rem;
     font-size: 8rem;
     font-weight: 700;
 }
 
 #area {
+    position: relative; /* 子要素の絶対配置の基準にする */
+    padding-right: 120px; /* #applyボタンのスペースを確保 */
     background-color: #f0f8ff;
     width: 100vw;
     height: 100rem;
@@ -199,4 +204,14 @@ h3 {
     align-self: start;
     justify-self: start;
     margin: 1rem 0 0 2rem;
+}
+
+#apply {
+    position: absolute; 
+    right: 75px; 
+    top: 50%; 
+    transform: translateY(-50%);
+    width: 80px;
+    height: 80px;
+    font-size: 2.5rem;
 }

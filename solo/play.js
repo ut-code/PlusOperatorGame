@@ -548,26 +548,26 @@ function init() {
 }
 
 async function start(level) {
-	for (const key in cards) {
-		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
-		for (const card of cards[key])
-			card.removeAttribute('style');
-	}
-	document.getElementById('clear').removeAttribute('style');
+    for (const key in cards) {
+        if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
+        for (const card of cards[key])
+            card.removeAttribute('style');
+    }
+    document.getElementById('clear').removeAttribute('style');
 
-	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)}`;
+    document.getElementById('title').innerHTML = `Level <br>${level.charAt(0).toUpperCase() + level.slice(1)}`;
 
-	game = new Game(level);
+    game = new Game(level);
 
-	game.onapply = async (...args) => {
-		game.block();
+    game.onapply = async (...args) => {
+        game.block();
 
-		await applyAnimation(...args);
+        await applyAnimation(...args);
 
-		if (!game.cleared) game.accept();
-	};
+        if (!game.cleared) game.accept();
+    };
 
-	await startAnimation();
+    await startAnimation();
 	game.accept();
 }
 
