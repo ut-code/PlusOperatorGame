@@ -548,32 +548,93 @@ function init() {
 }
 
 async function start(level) {
+	// UIの初期化
 	for (const key in cards) {
-		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
+		if (key === 'dummy') continue;
 		for (const card of cards[key])
 			card.removeAttribute('style');
 	}
 	document.getElementById('clear').removeAttribute('style');
+	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)} (vs CPU)`;
 
-	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)}`;
+	// Game の代わりに GameVsCPU をインスタンス化
+	game = new GameVsCPU(level);
 
-	game = new Game(level);
-
+	// 演算が適用された際のコールバックをCPUターン移行処理に設定
 	game.onapply = async (...args) => {
 		game.block();
+		await applyAnimation(...args); // アニメーションは共通処理を呼び出す
 
-		await applyAnimation(...args);
-
-		if (!game.cleared) game.accept();
+		if (!game.cleared) {
+			// プレイヤーの操作後ならCPUのターンに移行
+			game.isPlayerTurn = false;
+			game.cpuTurn();
+		}
 	};
 
 	await startAnimation();
 	game.accept();
 }
 
-var game;
-init();
-const params = new URLSearchParams(window.location.search);
-const level = params.get('level') || 'easy';
-const rule = params.get('rule');
-start(level);
+// このファイルは、soloモード用のJSファイルが先に読み込まれていることを前提。
+// soloモードの 'Game' クラスを継承して、CPU対戦用の機能を追加。
+
+class GameVsCPU extends Game {
+    constructor(level) {
+        super(level); // 親クラス(Game)のコンストラクタを実行
+        this.isPlayerTurn = true; // プレイヤーのターンかどうかを管理
+    }
+
+    // CPUの思考と操作を行うメソッド
+    cpuTurn() {
+        this.block(); // プレイヤーの操作を禁止
+        console.log("CPUのターンです。");
+
+        // TODO: ここにCPUの思考ロジックを実装。
+        // (例: 2秒後にプレイヤーのターンに戻すダミー処理)
+        setTimeout(() => {
+            console.log("プレイヤーのターンです。");
+            this.isPlayerTurn = true;
+            this.accept(); // プレイヤーの操作を許可
+        }, 2000);
+    }
+}
+
+// ゲーム開始処理を上書きして、GameVsCPUクラスを使うように変更
+// (元のファイルにある `start` 関数をこの関数で上書き)
+async function start(level) {
+    // UIの初期化
+    for (const key in cards) {
+        if (key === 'dummy') continue;
+        for (const card of cards[key])
+            card.removeAttribute('style');
+    }
+    document.getElementById('clear').removeAttribute('style');
+    document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)} (vs CPU)`;
+
+    // Game の代わりに GameVsCPU をインスタンス化
+    game = new GameVsCPU(level);
+
+    // 演算が適用された際のコールバックをCPUターン移行処理に設定
+    game.onapply = async (...args) => {
+        game.block();
+        await applyAnimation(...args); // アニメーションは共通処理を呼び出す
+
+        if (!game.cleared) {
+            // プレイヤーの操作後ならCPUのターンに移行
+            game.isPlayerTurn = false;
+            game.cpuTurn();
+        }
+    };
+
+    await startAnimation();
+    game.accept();
+}
+
+// 元のJSファイルの末尾で実行されるゲーム開始処理を上書きするため、
+// DOMContentLoaded で改めて start を呼び出します。
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const level = params.get('level') || 'easy';
+    start(level); // 上書きした start 関数が呼び出される
+});
