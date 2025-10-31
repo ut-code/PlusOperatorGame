@@ -555,7 +555,7 @@ async function start(level) {
 			card.removeAttribute('style');
 	}
 	document.getElementById('clear').removeAttribute('style');
-	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)} (vs CPU)`;
+	document.getElementById('title').innerHTML = `Level <br>${level.charAt(0).toUpperCase() + level.slice(1)} (vs CPU)`;
 
 	// Game の代わりに GameVsCPU をインスタンス化
 	game = new GameVsCPU(level);
