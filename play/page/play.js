@@ -521,10 +521,8 @@ async function applyAnimation(old, renew, index, user = true) {
 	for (const key of rest)
 		ele[key].classList.remove('display');
 
-	if (user) {
-		displayOperator(index.op, game.ops[renew.op].name);
-		displayNumber(index.num, renew.num);
-	}
+	displayOperator(index.op, game.ops[renew.op].name);
+	displayNumber(index.num, renew.num);
 
 	ele.apply.classList.add('invalid');
 
@@ -569,10 +567,10 @@ async function applyCPUAnimation() {
 
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	game.click('field', move.field.index);
-	await new Promise((resolve) => setTimeout(resolve, 600));
+	await new Promise((resolve) => setTimeout(resolve, 800));
 	displayOperator(move.op.index, game.ops[move.op.type].name, false);
 	game.click('op', move.op.index);
-	await new Promise((resolve) => setTimeout(resolve, 600));
+	await new Promise((resolve) => setTimeout(resolve, 800));
 	displayNumber(move.num.index, move.num.value, false)
 	game.click('num', move.num.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
@@ -580,9 +578,14 @@ async function applyCPUAnimation() {
 	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type]
 	game.state.field.values[move.field.index] = op.calc(field_value, move.num.value);
 
+	game.state.field.focus(-1);
+	game.state.op.focus(-1);
+	game.state.num.focus(-1);
+	//this.moves++;
+
 	await applyAnimation(
 		{ field: field_value, op: op, num: move.num.value },
-		{ field: game.state.field.values[move.field.index], op: null, num: null },
+		{ field: game.state.field.values[move.field.index], op: move.op.type, num: null },
 		{ field: move.field.index, op: move.op.index, num: move.num.index, apply: 0 },
 		false
 	);
