@@ -1,3 +1,9 @@
+const params = new URLSearchParams(window.location.search);
+const level = params.get('level') || 'easy';
+const rule = params.get('rule') || 'solo';
+
+const FIELD_COUNT = 6, OP_COUNT = 4, NUM_COUNT = 4;
+
 // 演算選択用の重み付き乱数
 class WeightRandom {
 	#weight;
@@ -21,7 +27,9 @@ class State {
 	static onenabled = () => { };
 	static ondisabled = () => { };
 
-	constructor(key, n, create, game) {
+	constructor(key, n, create, game, double = false) {
+		this.count = n;
+		n = double ? n * 2 : n;
 		this.key = key;
 		this.values = [...Array(n)].map(() => create());
 		this.valid = Array(n).fill(true);
@@ -67,7 +75,7 @@ class State {
 	// isValid(value)がtrueのカードのみ有効にする
 	filter(isValid) {
 		this.values.forEach((value, i) => {
-			const valid = isValid ? isValid(value) : true;
+			const valid = i >= this.count || (isValid ? isValid(value) : true);
 			if (!this.valid[i] && valid) {
 				this.valid[i] = true;
 				State.onenabled(this.key, i);
@@ -175,10 +183,10 @@ class Op {
 class Game {
 	onapply = () => { };
 
-	constructor(level) {
+	constructor(level, rule) {
 		this.level = level;
+		this.rule = rule;
 		this.moves = 0;
-
 
 		this.opgen = new WeightRandom(getOpPriority(level));
 
@@ -204,9 +212,9 @@ class Game {
 		this.ops = Op.list.filter(op => enabledOps.includes(op.name));
 
 		this.state = {
-			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
-			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
-			op: new State('op', 4, () => Math.floor(Math.random() * this.ops.length), this),
+			field: new State('field', FIELD_COUNT, () => Math.floor(Math.random() * 18 + 2), null, rule === 'battle'),
+			num: new State('num', NUM_COUNT, () => Math.floor(Math.random() * 6), null, rule === 'battle'),
+			op: new State('op', OP_COUNT, () => Math.floor(Math.random() * this.ops.length), this, rule === 'battle'),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -215,7 +223,7 @@ class Game {
 
 	// 演算開始
 	apply() {
-		if (!this.input || !this.valid) return;
+		if (!this.valid) return;
 
 		const field = this.state.field.value,
 			op = this.state.op.value,
@@ -258,16 +266,16 @@ class Game {
 	}
 
 	click(key, index) {
-		if (!this.input) return;
-
 		switch (key) {
 			case 'field':
 				this.state.field.focus(index);
 				break;
 			case 'op':
 				this.state.op.focus(index);
-				this.state.field.filter(this.ops[this.state.op.value]?.isFValid);
-				this.state.num.filter(this.ops[this.state.op.value]?.isPValid);
+				if (index < OP_COUNT) {
+					this.state.field.filter(this.ops[this.state.op.value]?.isFValid);
+					this.state.num.filter(this.ops[this.state.op.value]?.isPValid);
+				}
 				break;
 			case 'num':
 				this.state.num.focus(index);
@@ -278,16 +286,42 @@ class Game {
 	}
 
 	get cleared() {
-		return this.state.field.values.find((value) => value != 1) === undefined;
+		const values = this.state.field.values;
+		if (this.rule === 'solo')
+			return values.find((value) => value != 1) === undefined;
+		else
+			return values.slice(0, values.length / 2).find((value) => value != 1) === undefined;
+	}
+	get failed() {
+		const values = this.state.field.values;
+		if (this.rule === 'solo') return false;
+		else
+			return values.slice(values.length / 2).find((value) => value != 1) === undefined;
 	}
 }
 
 var game;
 
+function moveCPU() {
+	return {
+		op: {
+			index: 4,
+			type: 0
+		},
+		num: {
+			index: 4,
+			value: 0
+		},
+		field: {
+			index: 0
+		}
+	}
+}
+
 const cards = {
-	field: document.querySelectorAll('#field>.card'),
-	op: document.querySelectorAll('#op>.card'),
-	num: document.querySelectorAll('#num>.card'),
+	field: [...document.querySelectorAll('#field>.card'), ...rule === 'battle' ? document.querySelectorAll('#enemy_field>.card') : []],
+	op: [...document.querySelectorAll('#op>.card'), ...rule === 'battle' ? document.querySelectorAll('#enemy_op>.card') : []],
+	num: [...document.querySelectorAll('#num>.card'), ...rule === 'battle' ? document.querySelectorAll('#enemy_num>.card') : []],
 	apply: document.querySelectorAll('#apply'),
 	dummy: document.querySelector('#dummy')
 };
@@ -295,11 +329,40 @@ const cards = {
 for (const key in cards) {
 	if (key === 'dummy');
 	else if (key === 'apply')
-		cards.apply[0].addEventListener('click', () => game.apply());
+		cards.apply[0].addEventListener('click', () => {
+			if (game.input) game.apply()
+		});
 	else
 		cards[key].forEach((card, i) => {
-			card.addEventListener('click', () => game.click(key, i));
+			card.addEventListener('click', () => {
+				if (!game.input) return;
+				switch (key) {
+					case 'field':
+						game.click(key, i);
+						break;
+					case 'op':
+						if (i < OP_COUNT)
+							game.click(key, i);
+						break;
+					case 'num':
+						if (i < NUM_COUNT)
+							game.click(key, i);
+						break;
+				}
+			})
 		});
+}
+
+function setupDesign(rule) {
+	switch (rule) {
+		case 'solo':
+			document.getElementById('enemy_field').style.display = 'none';
+			document.getElementById('enemy_hand').style.display = 'none';
+			break;
+		case 'battle':
+			document.documentElement.style.fontSize = 'min(0.6vh, 0.36vw)';
+			break;
+	}
 }
 
 async function animate(ele, keyframes, duration, delay = 0) {
@@ -325,16 +388,19 @@ async function startAnimation() {
 	await new Promise((resolve) => setTimeout(resolve, 200));
 
 	await Promise.all(
-		[...cards.field].map((ele, i) => animate(ele, [
-			{
-				translate: `${(2.5 - i) * 10}rem -20rem 0`,
-				opacity: 0
-			},
-			{
-				translate: '0 0 0',
-				opacity: 1
-			}
-		], 500, i * 20))
+		[...cards.field].map((ele, i) => {
+			const index = game.rule === 'battle' ? i % FIELD_COUNT : i;
+			return animate(ele, [
+				{
+					translate: `${(2.5 - index) * 10}rem -20rem 0`,
+					opacity: 0
+				},
+				{
+					translate: '0 0 0',
+					opacity: 1
+				}
+			], 500, index * 20)
+		})
 	);
 
 	await Promise.all([
@@ -364,7 +430,7 @@ async function startAnimation() {
 	[...cards.num].forEach((ele) => ele.removeAttribute('style'));
 }
 
-async function applyAnimation(old, renew, index) {
+async function applyAnimation(old, renew, index, user = true) {
 	const getCenter = (ele) => {
 		const rect = ele.getBoundingClientRect();
 		return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -455,8 +521,10 @@ async function applyAnimation(old, renew, index) {
 	for (const key of rest)
 		ele[key].classList.remove('display');
 
-	displayOperator(index.op, game.ops[renew.op].name);
-	if (index.num !== -1) ele.num.textContent = `${renew.num}`;
+	if (user) {
+		displayOperator(index.op, game.ops[renew.op].name);
+		displayNumber(index.num, renew.num);
+	}
 
 	ele.apply.classList.add('invalid');
 
@@ -487,10 +555,42 @@ async function applyAnimation(old, renew, index) {
 		movesDisplay.textContent = `手数：${game.moves} 回`;
 		modal.style.opacity = 1;
 		modal.style.scale = 1;
+		return;
 	}
+
+	if (game.failed) {
+	}
+
+	if (game.rule === 'battle' && user) await applyCPUAnimation();
 }
 
-function displayOperator(index, name) {
+async function applyCPUAnimation() {
+	const move = moveCPU();
+
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	game.click('field', move.field.index);
+	await new Promise((resolve) => setTimeout(resolve, 600));
+	displayOperator(move.op.index, game.ops[move.op.type].name, false);
+	game.click('op', move.op.index);
+	await new Promise((resolve) => setTimeout(resolve, 600));
+	displayNumber(move.num.index, move.num.value, false)
+	game.click('num', move.num.index);
+	await new Promise((resolve) => setTimeout(resolve, 800));
+
+	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type]
+	game.state.field.values[move.field.index] = op.calc(field_value, move.num.value);
+
+	await applyAnimation(
+		{ field: field_value, op: op, num: move.num.value },
+		{ field: game.state.field.values[move.field.index], op: null, num: null },
+		{ field: move.field.index, op: move.op.index, num: move.num.index, apply: 0 },
+		false
+	);
+}
+
+function displayOperator(index, name, hide = true) {
+	if (index >= OP_COUNT && hide) name = 'hidden';
+
 	const ele = cards.op[index];
 	ele.textContent = '';
 	switch (name) {
@@ -507,10 +607,16 @@ function displayOperator(index, name) {
 			ele.textContent = {
 				add: '+', sub: '-', mul: '×', div: '÷', rem: '%',
 				and: '&', or: '|', xor: '^',
-				root: '√'
+				root: '√', hidden: '?'
 			}[name];
 			break;
 	}
+}
+
+function displayNumber(index, num, hide = true) {
+	if (index === -1) return;
+	if (index >= NUM_COUNT && hide) cards.num[index].textContent = '?';
+	else cards.num[index].textContent = `${num}`;
 }
 
 // 演算子の優先順位
@@ -530,12 +636,19 @@ function getOpPriority(level) {
 
 function init() {
 	State.oninit = (key, index, value, game) => {
-		if (key === 'op') {
-			if (game && game.ops[value]) {
-				displayOperator(index, game.ops[value].name);
-			}
+		switch (key) {
+			case 'op':
+				if (game && game.ops[value]) {
+					displayOperator(index, game.ops[value].name);
+				}
+				break;
+			case 'num':
+				displayNumber(index, value);
+				break;
+			case 'field':
+				cards[key][index].textContent = `${value}`;
+				break;
 		}
-		else cards[key][index].textContent = `${value}`;
 	}
 
 	State.onfocus = (key, index) => cards[key][index].classList.add('chosen');
@@ -547,7 +660,9 @@ function init() {
 	document.getElementById('return').addEventListener('click', () => location.replace('../../home/page/home.html'));
 }
 
-async function start(level) {
+async function start(level, rule) {
+	setupDesign(rule);
+
 	for (const key in cards) {
 		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
 		for (const card of cards[key])
@@ -557,7 +672,7 @@ async function start(level) {
 
 	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)}`;
 
-	game = new Game(level);
+	game = new Game(level, rule);
 
 	game.onapply = async (...args) => {
 		game.block();
@@ -573,7 +688,4 @@ async function start(level) {
 
 var game;
 init();
-const params = new URLSearchParams(window.location.search);
-const level = params.get('level') || 'easy';
-const rule = params.get('rule');
-start(level);
+start(level, rule);

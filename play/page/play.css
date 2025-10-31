@@ -17,7 +17,7 @@ body {
 
     user-select: none;
     overflow: hidden;
-    font-family: 'Roboto','Noto Sans JP', sans-serif;
+    font-family: 'Roboto', 'Noto Sans JP', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -30,13 +30,14 @@ body {
 #area {
     background-color: #f0f8ff;
     width: 100vw;
-    height: 100rem;
+    height: min(100vh, 60vw);
 
     display: grid;
     place-items: center;
 }
 
-#field {
+#field,
+#enemy_field {
     background-color: #ffffff;
     border-radius: 5rem;
     box-sizing: border-box;
@@ -50,7 +51,8 @@ body {
     place-items: center;
 }
 
-#hand {
+#hand,
+#enemy_hand {
     width: 150rem;
     height: 20rem;
 
@@ -94,7 +96,8 @@ body {
     will-change: translate, scale, opacity, border-color, transform, box-shadow;
     backface-visibility: visible;
 
-    #field & {
+    #field &,
+    #enemy_field & {
         width: 15rem;
         height: 18rem;
         border-width: 0.75rem;
@@ -111,7 +114,8 @@ body {
     }
 
     &.display {
-        border-color: #99f; /* display時の色を青系に変更 */
+        border-color: #99f;
+        /* display時の色を青系に変更 */
         scale: 1.2;
     }
 
@@ -124,16 +128,17 @@ body {
         border-color: #00c78a;
     }
 
-            &.invalid {
-                background-color: #999;
-                cursor: not-allowed;
-                border-color: #777;
-            }
+    &.invalid {
+        background-color: #999;
+        cursor: not-allowed;
+        border-color: #777;
     }
-    
-    .is-animating .card {
-        pointer-events: none;
-    }
+}
+
+.is-animating .card {
+    pointer-events: none;
+}
+
 #dummy {
     position: absolute;
     display: none;
@@ -159,9 +164,9 @@ body {
     }
 
     #clear-moves {
-	font-size: 5rem;
-	text-align: center;
-	color: #333;
+        font-size: 5rem;
+        text-align: center;
+        color: #333;
     }
 
     #buttons {
@@ -194,9 +199,10 @@ h3 {
     color: #555;
 }
 
-#field h3,
-#hand h3 {
-    align-self: start;
-    justify-self: start;
-    margin: 1rem 0 0 2rem;
+#area {
+    h3 {
+        align-self: start;
+        justify-self: start;
+        margin: 1rem 0 0 2rem;
+    }
 }
