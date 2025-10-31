@@ -23,6 +23,9 @@ body {
 }
 
 #title {
+    position: absolute;
+    top: 2rem;
+    right: 4rem;
     font-size: 8rem;
     font-weight: 700;
 }
@@ -33,10 +36,32 @@ body {
     height: 100rem;
 
     display: grid;
-    place-items: center;
+    align-items: center; 
+    justify-items: start;
+    padding-left: 5rem; 
+    box-sizing: border-box; 
 }
 
 #field {
+    background-color: #ffffff;
+    border-radius: 5rem;
+    box-sizing: border-box;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+
+    width: 150rem;
+    height: 30rem;
+
+    display: grid;
+    grid-auto-flow: column;
+    place-items: center;
+}
+
+
+#cpu-field .card {
+    border-color: #f33; 
+}
+
+#cpu-field {
     background-color: #ffffff;
     border-radius: 5rem;
     box-sizing: border-box;
@@ -94,7 +119,8 @@ body {
     will-change: translate, scale, opacity, border-color, transform, box-shadow;
     backface-visibility: visible;
 
-    #field & {
+
+    #field &, #cpu-field & {
         width: 15rem;
         height: 18rem;
         border-width: 0.75rem;
@@ -111,7 +137,7 @@ body {
     }
 
     &.display {
-        border-color: #99f; /* display時の色を青系に変更 */
+        border-color: #99f; 
         scale: 1.2;
     }
 
@@ -196,7 +222,16 @@ h3 {
 
 #field h3,
 #hand h3 {
-    align-self: start;
+    align-self: center;
     justify-self: start;
-    margin: 1rem 0 0 2rem;
+    margin: 0 0 0 2rem; 
+}
+
+#apply {
+    position: absolute; 
+    right: 75px; 
+    top: 50%; 
+    transform: translateY(-50%);
+
+    font-size: 5rem;
 }
