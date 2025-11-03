@@ -452,11 +452,16 @@ async function applyAnimation(old, renew, index, user = true) {
 	}
 	ele.field.style.zIndex = 2;
 
+	const areaRect = document.getElementById('area').getBoundingClientRect();
+	const areaCenterY = areaRect.top + areaRect.height / 2;
+
 	// カードを中心に
 	await Promise.all(
 		keys.map((key, i) => {
+			// HACK: applyボタンだけtransformYの補正が入っているため、その分を補正する
+			const offsetY = key === 'apply' ? ele.apply.getBoundingClientRect().height / 4 : 0;
 			return animate(ele[key], {
-				translate: `calc(50vw - ${center[key].x}px + ${arrange[key]}rem) calc(50vh - ${center[key].y}px) 0`,
+				translate: `calc(50vw - ${center[key].x}px + ${arrange[key]}rem) calc(${areaCenterY}px - ${center[key].y}px + ${offsetY}px) 0`,
 				scale: (key === 'field' ? 2 / 3 : 1) * 1.5
 			}, 500);
 		})
@@ -475,7 +480,7 @@ async function applyAnimation(old, renew, index, user = true) {
 	ele.dummy.textContent = ele.field.textContent;
 
 	ele.field.textContent = `${renew.field}`;
-	ele.field.style.translate = `calc(50vw - ${center.field.x}px + ${arrange.new_field}rem) calc(50vh - ${center.field.y}px) 0`;
+	ele.field.style.translate = `calc(50vw - ${center.field.x}px + ${arrange.new_field}rem) calc(${areaCenterY}px - ${center.field.y}px) 0`;
 
 	// 答えのカード出現
 	await animate(ele.field, [
@@ -547,6 +552,8 @@ async function applyAnimation(old, renew, index, user = true) {
 	['dummy', ...rest].forEach((key) => {
 		ele[key].removeAttribute('style');
 	});
+	// HACK: applyボタンのtransformを再適用
+	ele.apply.style.transform = 'translateY(-50%)';
 
 	if (game.cleared) {
 		const modal = document.getElementById('clear');
