@@ -203,7 +203,7 @@ h3 {
 #apply {
     position: absolute;
     top: 50%;
-    right:5rem;
+    right:18%;
     transform: translateY(-50%);
 }
 

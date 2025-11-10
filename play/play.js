@@ -1,8 +1,20 @@
+let qTable = {};
 const params = new URLSearchParams(window.location.search);
 const level = params.get('level') || 'easy';
 const rule = params.get('rule') || 'solo';
 
 const FIELD_COUNT = 6, OP_COUNT = 4, NUM_COUNT = 4;
+
+// QテーブルからCPUの状態キーを生成する
+function getStateKeyForCPU(state) {
+    // AIモデルはプレイヤー視点（最初の6,4,4個の要素）で学習されているため、
+    // CPU（敵）の状態をプレイヤー視点に変換してQテーブルを引く
+    const field = state.field.values.slice(FIELD_COUNT).join(',');
+    const ops = state.op.values.slice(OP_COUNT).map(opIdx => game.ops[opIdx]?.name || 'unknown').join(',');
+    const nums = state.num.values.slice(NUM_COUNT).join(',');
+    return `F:${field}|O:${ops}|N:${nums}`;
+}
+
 
 // 演算選択用の重み付き乱数
 class WeightRandom {
@@ -304,20 +316,55 @@ var game;
 
 // 対戦相手の手を設定
 function moveCPU() {
-	return {
-		op: {
-			index: Math.floor((Math.random() + 1) * OP_COUNT),
-			type: 8
-		},
-		num: {
-			index: -1,//Math.floor((Math.random() + 1) * NUM_COUNT),
-			value: 0
-		},
-		field: {
-			index: 0
-		}
-	}
+    const stateKey = getStateKeyForCPU(game.state);
+    const validActions = qTable[stateKey];
+    let action = null;
+
+    if (validActions && Object.keys(validActions).length > 0) {
+        let bestQ = -Infinity;
+        let bestActionKey = '';
+        for (const actionKey in validActions) {
+            if (validActions[actionKey] > bestQ) {
+                bestQ = validActions[actionKey];
+                bestActionKey = actionKey;
+            }
+        }
+        const match = bestActionKey.match(/F(\d+)O(\d+)N(\d+)/);
+        if (match) {
+            action = { field: parseInt(match[1]), op: parseInt(match[2]), num: parseInt(match[3]) };
+        }
+    }
+
+    // Qテーブルにない状態か、有効なアクションがない場合はランダムに行動
+    if (!action) {
+        action = {
+            field: Math.floor(Math.random() * FIELD_COUNT),
+            op: Math.floor(Math.random() * OP_COUNT),
+            num: Math.floor(Math.random() * NUM_COUNT)
+        };
+    }
+
+    // `applyCPUAnimation`が期待する形式に変換する
+    const cpuOpCardIndex = action.op + OP_COUNT;
+    const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
+
+    const cpuNumCardIndex = action.num + NUM_COUNT;
+    const numValue = game.state.num.values[cpuNumCardIndex];
+
+    const cpuFieldCardIndex = action.field + FIELD_COUNT;
+
+    const move = {
+        op: { index: cpuOpCardIndex, type: opIndexInGameOps },
+        num: { index: cpuNumCardIndex, value: numValue },
+        field: { index: cpuFieldCardIndex }
+    };
+
+    // 元のapplyCPUAnimationのロジックとの互換性のための状態更新
+    game.state.op.values[move.op.index] = move.op.type;
+
+    return move;
 }
+
 
 const cards = {
 	field: [...document.querySelectorAll('#field>.card'), ...rule === 'battle' ? document.querySelectorAll('#enemy_field>.card') : []],
@@ -571,10 +618,9 @@ async function applyAnimation(old, renew, index, user = true) {
 }
 
 async function applyCPUAnimation() {
-	const move = moveCPU();
+	const move = moveCPU(game);
 	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type];
-	game.state.op.values[move.op.index] = move.op.type;
-
+	
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	game.click('field', move.field.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
@@ -601,8 +647,8 @@ async function applyCPUAnimation() {
 		false
 	);
 }
-
-function displayOperator(index, name, hide = true) {
+//CPUの手札を見るために一時的にhide=falseにしている。後で元に戻す
+function displayOperator(index, name, hide = false) {
 	if (index >= OP_COUNT && hide) name = 'hidden';
 
 	const ele = cards.op[index];
@@ -626,8 +672,8 @@ function displayOperator(index, name, hide = true) {
 			break;
 	}
 }
-
-function displayNumber(index, num, hide = true) {
+//同上
+function displayNumber(index, num, hide = false) {
 	if (index === -1) return;
 	if (index >= NUM_COUNT && hide) cards.num[index].textContent = '?';
 	else cards.num[index].textContent = `${num}`;
@@ -670,12 +716,24 @@ function init() {
 	State.onenabled = (key, index) => cards[key][index].classList.remove('invalid');
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
-	document.getElementById('retry').addEventListener('click', () => start(2));
-	document.getElementById('return').addEventListener('click', () => location.replace('../../home/page/home.html'));
+	document.getElementById('retry').addEventListener('click', () => start(level, rule));
+	document.getElementById('return').addEventListener('click', () => location.replace('../home/home.html'));
 }
 
 async function start(level, rule) {
 	setupDesign(rule);
+
+    try {
+        const response = await fetch('/q-table.json');
+        if (response.ok) {
+            qTable = await response.json();
+            console.log('Q-table loaded successfully.');
+        } else {
+            console.error('Failed to load Q-table. CPU will use random moves.');
+        }
+    } catch (error) {
+        console.error('Error fetching Q-table:', error);
+    }
 
 	for (const key in cards) {
 		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
