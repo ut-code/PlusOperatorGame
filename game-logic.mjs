@@ -99,30 +99,18 @@ export class Op {
 }
 
 export class Game {
-	constructor(level, rule) {
-		this.level = level;
+	constructor(difficulty, rule, maxFieldValue = 20) {
+		this.difficulty = difficulty;
 		this.rule = rule;
 		this.moves = 0;
 
-		const easyOps = ['add', 'sub', 'mul', 'div'];
-		const normalOps = ['rem', 'root', 'd', 'gcd'];
-		const hardOps = ['and', 'or', 'xor', 'pop'];
-
-		let enabledOps = [];
-		switch (level) {
-			case 'easy': enabledOps = easyOps; break;
-			case 'normal': enabledOps = [...easyOps, ...normalOps]; break;
-			case 'hard': enabledOps = [...easyOps, ...normalOps, ...hardOps]; break;
-			default: enabledOps = easyOps;
-		}
-
-		this.ops = Op.list.filter(op => enabledOps.includes(op.name));
-        this.opgen = new WeightRandom(getOpPriority(level, this.ops));
+		this.ops = Op.list.filter(op => difficulty.ops.includes(op.name));
+        this.opgen = new WeightRandom(getOpPriority(difficulty.levelName || 'easy', this.ops));
 
 
 		this.state = {
-			field: new State('field', 6, () => Math.floor(Math.random() * 18 + 2)),
-			num: new State('num', 4, () => Math.floor(Math.random() * 6)),
+			field: new State('field', 6, () => Math.floor(Math.random() * maxFieldValue) + 1),
+			num: new State('num', 4, () => Math.floor(Math.random() * (difficulty.numRange[1] - difficulty.numRange[0] + 1)) + difficulty.numRange[0]),
 			op: new State('op', 4, () => this.ops[Math.floor(Math.random() * this.ops.length)]),
 			apply: new State('apply', 1, () => '=')
 		};

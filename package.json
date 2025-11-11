@@ -13,12 +13,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/ut-code/PlusOperatorGame/issues"
   },
   "homepage": "https://github.com/ut-code/PlusOperatorGame#readme",
   "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
     "express": "^5.1.0"
   }
 }

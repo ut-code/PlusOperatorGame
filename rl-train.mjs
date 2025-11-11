@@ -1,4 +1,4 @@
-import { Game } from './game-logic.mjs';
+import { Game, Op} from './game-logic.mjs';
 import { QLearningAgent } from './rl-agent.mjs';
 import { writeFileSync } from 'fs';
 
@@ -18,6 +18,9 @@ for (let i = 0; i < FIELD_COUNT; i++) {
 }
 
 // 2. エージェントを初期化する
+const stateSize = 6 + 4 + (4 * 12); // フィールド6 + 数字4 + 演算子48
+const actionSize = actions.length;
+
 const agent = new QLearningAgent(actions);
 
 // 3. 報酬を計算する関数
