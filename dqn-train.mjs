@@ -8,6 +8,12 @@ const LEVEL = 'easy';
 const MAX_MOVES_PER_EPISODE = 100;
 const BATCH_SIZE = 32;
 const UPDATE_TARGET_EVERY = 5; // episodes
+const REPLAY_BUFFER_CAPACITY = 10000;
+
+// Beta annealing for Prioritized Experience Replay
+const BETA_START = 0.4;
+const BETA_END = 1.0;
+const BETA_ANNEAL_FRAC = 0.8; // Fraction of total episodes to anneal over
 
 // Curriculum Learning Settings
 const curriculum = [
@@ -40,42 +46,7 @@ const opList = Op.list;
 const stateSize = 6 + 4 + (4 * opList.length);
 const actionSize = actions.length;
 
-// 3. Replay Buffer
-class ReplayBuffer {
-    constructor(maxSize) {
-        this.buffer = [];
-        this.maxSize = maxSize;
-        this.index = 0;
-    }
-
-    add(experience) {
-        if (this.buffer.length < this.maxSize) {
-            this.buffer.push(experience);
-        } else {
-            this.buffer[this.index] = experience;
-        }
-        this.index = (this.index + 1) % this.maxSize;
-    }
-
-    sample(batchSize) {
-        const sampleIndices = [];
-        while (sampleIndices.length < batchSize) {
-            const index = Math.floor(Math.random() * this.buffer.length);
-            if (!sampleIndices.includes(index)) {
-                sampleIndices.push(index);
-            }
-        }
-        return sampleIndices.map(index => this.buffer[index]);
-    }
-
-    
-
-    get length() {
-        return this.buffer.length;
-    }
-}
-
-// 4. DQN Model
+// 3. DQN Model
 function createDQNModel(inputShape, outputShape) {
     const model = tf.sequential();
     model.add(tf.layers.dense({ inputShape: [inputShape], units: 128, activation: 'relu' }));
@@ -85,15 +56,14 @@ function createDQNModel(inputShape, outputShape) {
     return model;
 }
 
-// 5. Initialization
+// 4. Initialization
 const model = createDQNModel(stateSize, actionSize);
 const targetModel = createDQNModel(stateSize, actionSize);
 targetModel.setWeights(model.getWeights());
 
-const replayBuffer = new ReplayBuffer(10000);
-const agent = new DQNAgent(model, targetModel, replayBuffer, actions, opList, 0.95, 1.0, 0.01, 0.9998);
+const agent = new DQNAgent(model, targetModel, REPLAY_BUFFER_CAPACITY, actions, opList, 0.95, 1.0, 0.01, 0.9998);
 
-// 6. Reward Function
+// 5. Reward Function
 function calculateReward(game, moveSuccess, oldState) {
     if (!moveSuccess) return -10;
     if (game.cleared) return 1000;
@@ -104,11 +74,14 @@ function calculateReward(game, moveSuccess, oldState) {
     
     const improvement = oldDistance - newDistance;
     
+    var reward = improvement*2 - 0.1;
+    if (reward < -50) reward = -50;
+    if (reward > 50) reward = 50;
     // 改善度に応じた報酬、手数ペナルティを軽減
-    return improvement * 2 - 0.1;
+    return reward;
 }
 
-// 7. Training Loop
+// 6. Training Loop
 async function train() {
     console.log('DQN Training Started...');
     let totalMoves = 0;
@@ -144,6 +117,9 @@ async function train() {
         let state = game.state;
         let moves = 0;
         let episodeReward = 0;
+        
+        // Calculate current beta
+        const beta = Math.min(BETA_END, BETA_START + (BETA_END - BETA_START) * (i / (EPISODES * BETA_ANNEAL_FRAC)));
 
         while (!game.cleared && moves < MAX_MOVES_PER_EPISODE) {
             const oldState = {
@@ -167,8 +143,8 @@ async function train() {
 
             agent.remember(state, actionIndex, reward, nextState, done);
 
-            if (replayBuffer.length > BATCH_SIZE) {
-                await agent.replay(BATCH_SIZE);
+            if (agent.replayBuffer.length > BATCH_SIZE) {
+                await agent.replay(BATCH_SIZE, beta);
             }
 
             state = nextState;
@@ -191,7 +167,10 @@ async function train() {
             console.log(`Episode ${i + 1}/${EPISODES} | Target model updated.`);
         }
         
-        console.log(`Episode ${i + 1}/${EPISODES} | Level: ${currentLevel} (max: ${curriculum[currentLevel].max}) | Moves: ${moves} | Reward: ${episodeReward.toFixed(2)} | Epsilon: ${agent.epsilon.toFixed(4)}`);
+        console.log(`Episode ${i + 1}/${EPISODES} | Level: ${currentLevel} (max: ${curriculum[currentLevel].max}) | Moves: ${moves} | Reward: ${episodeReward.toFixed(2)} | Epsilon: ${agent.epsilon.toFixed(4)} | Beta: ${beta.toFixed(4)}`);
+
+        // Decay epsilon at the end of the episode
+        agent.decayEpsilon();
 
         // Curriculum level up check
         if (currentLevel < curriculum.length - 1 && episodeRewards.length === REWARD_BUFFER_SIZE) {
