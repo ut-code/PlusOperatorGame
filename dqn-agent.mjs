@@ -1,80 +1,137 @@
 import * as tf from '@tensorflow/tfjs';
 
-// +++ Prioritized Replay Buffer +++
+// +++ SumTree for efficient sampling +++
+class SumTree {
+  constructor(capacity) {
+    this.capacity = capacity;
+    this.tree = new Array(2 * capacity - 1).fill(0);
+    this.data = new Array(capacity).fill(null);
+    this.write = 0;
+    this.size = 0;
+  }
+
+  _propagate(idx, change) {
+    let parent = Math.floor((idx - 1) / 2);
+    this.tree[parent] += change;
+    if (parent !== 0) {
+      this._propagate(parent, change);
+    }
+  }
+
+  _retrieve(idx, s) {
+    const left = 2 * idx + 1;
+    const right = left + 1;
+
+    if (left >= this.tree.length) {
+      return idx;
+    }
+
+    if (s <= this.tree[left]) {
+      return this._retrieve(left, s);
+    } else {
+      return this._retrieve(right, s - this.tree[left]);
+    }
+  }
+
+  total() {
+    return this.tree[0];
+  }
+
+  add(priority, data) {
+    const idx = this.write + this.capacity - 1;
+
+    this.data[this.write] = data;
+    this.update(idx, priority);
+
+    this.write = (this.write + 1) % this.capacity;
+    if (this.size < this.capacity) {
+        this.size++;
+    }
+  }
+
+  update(idx, priority) {
+    const change = priority - this.tree[idx];
+    this.tree[idx] = priority;
+    this._propagate(idx, change);
+  }
+
+  get(s) {
+    const idx = this._retrieve(0, s);
+    const dataIdx = idx - this.capacity + 1;
+    return {
+      idx: idx,
+      priority: this.tree[idx],
+      data: this.data[dataIdx]
+    };
+  }
+}
+
+
+// +++ Prioritized Replay Buffer using SumTree +++
 class PrioritizedReplayBuffer {
   constructor(capacity, alpha = 0.6) {
-    this.capacity = capacity;
+    this.tree = new SumTree(capacity);
     this.alpha = alpha;
-    this.buffer = [];
-    this.priorities = [];
-    this.position = 0;
+    this.capacity = capacity;
     this.PER_e = 1e-5; // Epsilon to ensure no priority is zero
+    this.maxPriority = 1.0;
   }
 
   add(experience) {
-    const maxPriority = this.priorities.length > 0 ? Math.max(...this.priorities) : 1.0;
-    
-    if (this.buffer.length < this.capacity) {
-      this.buffer.push(experience);
-      this.priorities.push(maxPriority);
-    } else {
-      this.buffer[this.position] = experience;
-      this.priorities[this.position] = maxPriority;
-    }
-    this.position = (this.position + 1) % this.capacity;
+    // New experiences get maximum priority to ensure they are replayed
+    this.tree.add(this.maxPriority, experience);
   }
 
   sample(batchSize, beta = 0.4) {
-    const scaledPriorities = this.priorities.map(p => Math.pow(p, this.alpha));
-    const prioSum = scaledPriorities.reduce((a, b) => a + b, 0);
-    const probabilities = scaledPriorities.map(p => p / prioSum);
-
-    const sampleIndices = [];
-    const sampleExperiences = [];
-    const sampleWeights = [];
+    const experiences = [];
+    const indices = [];
+    const weights = [];
+    
+    const segment = this.tree.total() / batchSize;
+    const priorities = [];
 
     for (let i = 0; i < batchSize; i++) {
-      // Using probabilities to sample (can be slow, but simple to implement)
-      const rand = Math.random();
-      let cumulativeProb = 0;
-      let sampleIndex = -1;
-      for (let j = 0; j < probabilities.length; j++) {
-        cumulativeProb += probabilities[j];
-        if (rand <= cumulativeProb) {
-          sampleIndex = j;
-          break;
-        }
-      }
-      if (sampleIndex === -1) sampleIndex = this.buffer.length - 1;
-
-      sampleIndices.push(sampleIndex);
-      sampleExperiences.push(this.buffer[sampleIndex]);
+      const a = segment * i;
+      const b = segment * (i + 1);
+      const s = Math.random() * (b - a) + a;
       
-      // Calculate Importance Sampling (IS) weight
-      const weight = Math.pow(this.buffer.length * probabilities[sampleIndex], -beta);
-      sampleWeights.push(weight);
+      const { idx, priority, data } = this.tree.get(s);
+
+      if (data) {
+        priorities.push(priority);
+        experiences.push(data);
+        indices.push(idx);
+      }
     }
 
-    // Normalize weights by the maximum weight in the batch
-    const maxWeight = Math.max(...sampleWeights);
-    const normalizedWeights = sampleWeights.map(w => w / maxWeight);
+    const samplingProbabilities = priorities.map(p => p / this.tree.total());
+    
+    const maxWeight = Math.pow(this.tree.size * Math.min(...samplingProbabilities), -beta);
+
+    const sampleWeights = samplingProbabilities.map(p => 
+        Math.pow(this.tree.size * p, -beta) / maxWeight
+    );
 
     return {
-      experiences: sampleExperiences,
-      indices: sampleIndices,
-      weights: tf.tensor1d(normalizedWeights)
+      experiences: experiences,
+      indices: indices,
+      weights: tf.tensor1d(sampleWeights)
     };
   }
 
   updatePriorities(indices, tdErrors) {
     for (let i = 0; i < indices.length; i++) {
-      const priority = Math.abs(tdErrors[i]) + this.PER_e;
-      this.priorities[indices[i]] = priority;
+      const priority = Math.pow(Math.abs(tdErrors[i]) + this.PER_e, this.alpha);
+      this.tree.update(indices[i], priority);
+      // Update max priority
+      if (priority > this.maxPriority) {
+          this.maxPriority = priority;
+      }
     }
   }
 
   get length() {
-    return this.buffer.length;
+    return this.tree.size;
   }
 }
 
@@ -167,21 +224,33 @@ export class DQNAgent {
     this.replayBuffer.add({ state, action, reward, nextState, done });
   }
 
+  // 追加: epsilon 減衰を独立化
+  decayEpsilon() {
+    if (this.epsilon > this.minEpsilon) {
+      this.epsilon = Math.max(this.minEpsilon, this.epsilon * this.epsilonDecay);
+    }
+  }
+
   async replay(batchSize, beta) {
+    // 早期 return 前にも epsilon を減衰させる（バッファ不足時の対応）
     if (this.replayBuffer.length < batchSize) {
+      // this.decayEpsilon(); // DELETED: Decay will be handled per episode
       return { loss: 0 }; // Return zero loss if not enough samples
     }
 
     const { experiences, indices, weights } = this.replayBuffer.sample(batchSize, beta);
+    if (experiences.length === 0) {
+        // this.decayEpsilon(); // DELETED: Decay will be handled per episode
+        return { loss: 0 };
+    }
     
     const states = experiences.map(exp => this.stateToVector(exp.state).dataSync());
     const nextStates = experiences.map(exp => this.stateToVector(exp.nextState).dataSync());
 
-    const statesTensor = tf.tensor2d(states, [batchSize, this.model.input.shape[1]]);
-    const nextStatesTensor = tf.tensor2d(nextStates, [batchSize, this.model.input.shape[1]]);
-
-    // Predict Q-values for next states using the target model
-    const nextQValues = this.targetModel.predict(nextStatesTensor).arraySync();
+    const nextQValues = tf.tidy(() => {
+        const nextStatesTensor = tf.tensor2d(nextStates, [nextStates.length, this.model.input.shape[1]]);
+        return this.targetModel.predict(nextStatesTensor).arraySync();
+    });
     
     // Calculate target Q-values
     const targets = experiences.map((exp, i) => {
@@ -192,41 +261,36 @@ export class DQNAgent {
       return target;
     });
 
-    // Use tf.tidy to manage memory
     let loss;
-    tf.tidy(() => {
-        const {value: lossValue, grads} = this.optimizer.computeGradients(() => {
-            const qValues = this.model.apply(statesTensor); // Get Q-values for current states
-            
-            // Gather the Q-values for the actions that were actually taken
-            const actionIndices = experiences.map(exp => exp.action);
-            const qValuesForActions = qValues.mul(tf.oneHot(tf.tensor1d(actionIndices, 'int32'), this.actions.length)).sum(-1);
+    const statesTensor = tf.tensor2d(states, [states.length, this.model.input.shape[1]]);
 
-            // Calculate TD errors for priority updates
-            const tdErrorsTensor = tf.sub(tf.tensor1d(targets), qValuesForActions);
-            
-            // Calculate weighted loss
-            const weightedSquaredError = tf.mul(weights, tf.square(tdErrorsTensor));
-            const currentLoss = tf.mean(weightedSquaredError);
-            
-            // Update priorities outside the gradient calculation
-            tf.dispose(tdErrorsTensor); // Dispose tensor to avoid memory leak
-            const tdErrors = tf.sub(tf.tensor1d(targets), qValuesForActions).dataSync();
-            this.replayBuffer.updatePriorities(indices, tdErrors);
+    const lossFunction = () => {
+        const qValues = this.model.apply(statesTensor);
+        const actionIndices = experiences.map(exp => exp.action);
+        const qValuesForActions = qValues.mul(tf.oneHot(tf.tensor1d(actionIndices, 'int32'), this.actions.length)).sum(-1);
 
-            return {value: currentLoss};
-        });
+        const tdErrorsTensor = tf.sub(tf.tensor1d(targets), qValuesForActions);
+        
+        const tdErrors = tdErrorsTensor.dataSync();
+        this.replayBuffer.updatePriorities(indices, tdErrors);
 
+        const weightedSquaredError = tf.mul(weights, tf.square(tdErrorsTensor));
+        return tf.mean(weightedSquaredError);
+    };
+
+    const {value, grads} = this.optimizer.computeGradients(lossFunction);
+
+    if (grads) {
         this.optimizer.applyGradients(grads);
-        loss = lossValue.dataSync()[0];
         tf.dispose(grads);
-        tf.dispose(lossValue);
-    });
-
-
-    if (this.epsilon > this.minEpsilon) {
-      this.epsilon *= this.epsilonDecay;
     }
+
+    loss = value.dataSync()[0];
+    
+    tf.dispose([value, statesTensor, weights]);
+
+    // replay 実行後に確実に epsilon を減衰
+    // this.decayEpsilon(); // DELETED: Decay will be handled per episode
     
     return { loss };
   }
