@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs-node';
 
 // +++ SumTree for efficient sampling +++
 class SumTree {
@@ -197,27 +197,27 @@ export class DQNAgent {
     const validMask = this.getValidActionMask(state, game);
     
     if (Math.random() <= this.epsilon) {
-      // 有効な行動の中からランダムに選択
       const validIndices = validMask
         .map((valid, idx) => valid ? idx : -1)
         .filter(idx => idx !== -1);
       if (validIndices.length === 0) {
         console.warn("No valid actions available!");
-        return 0; // フォールバック
+        return 0;
       }
       return validIndices[Math.floor(Math.random() * validIndices.length)];
     }
     
-    const stateVector = this.stateToVector(state);
-    const qValues = this.model.predict(stateVector).dataSync();
-    
-    // 無効な行動のQ値を-∞にする
-    const maskedQValues = qValues.map((q, idx) => 
-      validMask[idx] ? q : -Infinity
-    );
-    
-    // 最大Q値の行動を選択
-    return maskedQValues.indexOf(Math.max(...maskedQValues));
+    return tf.tidy(() => {
+      const stateVector = this.stateToVector(state);
+      const qValuesTensor = this.model.predict(stateVector);
+      const qValues = qValuesTensor.dataSync();
+      
+      const maskedQValues = qValues.map((q, idx) => 
+        validMask[idx] ? q : -Infinity
+      );
+      
+      return maskedQValues.indexOf(Math.max(...maskedQValues));
+    });
   }
 
   remember(state, action, reward, nextState, done) {
@@ -232,27 +232,41 @@ export class DQNAgent {
   }
 
   async replay(batchSize, beta) {
-    // 早期 return 前にも epsilon を減衰させる（バッファ不足時の対応）
     if (this.replayBuffer.length < batchSize) {
-      // this.decayEpsilon(); // DELETED: Decay will be handled per episode
-      return { loss: 0 }; // Return zero loss if not enough samples
+      return { loss: 0 };
     }
 
     const { experiences, indices, weights } = this.replayBuffer.sample(batchSize, beta);
     if (experiences.length === 0) {
-        // this.decayEpsilon(); // DELETED: Decay will be handled per episode
-        return { loss: 0 };
+      weights.dispose();
+      return { loss: 0 };
     }
     
-    const states = experiences.map(exp => this.stateToVector(exp.state).dataSync());
-    const nextStates = experiences.map(exp => this.stateToVector(exp.nextState).dataSync());
-
-    const nextQValues = tf.tidy(() => {
-        const nextStatesTensor = tf.tensor2d(nextStates, [nextStates.length, this.model.input.shape[1]]);
-        return this.targetModel.predict(nextStatesTensor).arraySync();
+    const stateTensors = [];
+    const nextStateTensors = [];
+    
+    for (let exp of experiences) {
+      stateTensors.push(this.stateToVector(exp.state));
+      nextStateTensors.push(this.stateToVector(exp.nextState));
+    }
+    
+    const states = stateTensors.map(t => {
+      const data = t.dataSync();
+      t.dispose();
+      return data;
     });
     
-    // Calculate target Q-values
+    const nextStates = nextStateTensors.map(t => {
+      const data = t.dataSync();
+      t.dispose();
+      return data;
+    });
+
+    const nextQValues = tf.tidy(() => {
+      const nextStatesTensor = tf.tensor2d(nextStates, [nextStates.length, this.model.input.shape[1]]);
+      return this.targetModel.predict(nextStatesTensor).arraySync();
+    });
+    
     const targets = experiences.map((exp, i) => {
       let target = exp.reward;
       if (!exp.done) {
@@ -263,34 +277,31 @@ export class DQNAgent {
 
     let loss;
     const statesTensor = tf.tensor2d(states, [states.length, this.model.input.shape[1]]);
+    const targetsTensor = tf.tensor1d(targets);
+    const actionIndices = experiences.map(exp => exp.action);
 
     const lossFunction = () => {
-        const qValues = this.model.apply(statesTensor);
-        const actionIndices = experiences.map(exp => exp.action);
-        const qValuesForActions = qValues.mul(tf.oneHot(tf.tensor1d(actionIndices, 'int32'), this.actions.length)).sum(-1);
+      const qValues = this.model.apply(statesTensor);
+      const qValuesForActions = qValues.mul(tf.oneHot(tf.tensor1d(actionIndices, 'int32'), this.actions.length)).sum(-1);
+      const tdErrorsTensor = tf.sub(targetsTensor, qValuesForActions);
+      
+      const tdErrors = tdErrorsTensor.dataSync();
+      this.replayBuffer.updatePriorities(indices, tdErrors);
 
-        const tdErrorsTensor = tf.sub(tf.tensor1d(targets), qValuesForActions);
-        
-        const tdErrors = tdErrorsTensor.dataSync();
-        this.replayBuffer.updatePriorities(indices, tdErrors);
-
-        const weightedSquaredError = tf.mul(weights, tf.square(tdErrorsTensor));
-        return tf.mean(weightedSquaredError);
+      const weightedSquaredError = tf.mul(weights, tf.square(tdErrorsTensor));
+      return tf.mean(weightedSquaredError);
     };
 
     const {value, grads} = this.optimizer.computeGradients(lossFunction);
 
     if (grads) {
-        this.optimizer.applyGradients(grads);
-        tf.dispose(grads);
+      this.optimizer.applyGradients(grads);
+      tf.dispose(grads);
     }
 
     loss = value.dataSync()[0];
     
-    tf.dispose([value, statesTensor, weights]);
-
-    // replay 実行後に確実に epsilon を減衰
-    // this.decayEpsilon(); // DELETED: Decay will be handled per episode
+    tf.dispose([value, statesTensor, targetsTensor, weights]);
     
     return { loss };
   }
