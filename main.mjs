@@ -1,12 +1,6 @@
 import express from "express";
-import { readFileSync } from "node:fs";
 const app = express();
 
-app.use(express.static("."));
-
-app.get("/", (request, response) => {
-  response.send(readFileSync("./home/home.html", "utf-8"));
-});
-
+app.use(express.static("./public"));
 
 app.listen(3000);
