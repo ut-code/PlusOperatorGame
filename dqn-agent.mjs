@@ -137,7 +137,7 @@ class PrioritizedReplayBuffer {
 
 
 export class DQNAgent {
-  constructor(model, targetModel, replayBufferCapacity, actions, opList, gamma = 0.95, epsilon = 1.0, minEpsilon = 0.01, epsilonDecay = 0.995, learningRate = 0.001) {
+  constructor(model, targetModel, replayBufferCapacity, actions, opList, gamma = 0.95, epsilon = 1.0, minEpsilon = 0.01, learningRate = 0.001) {
     this.model = model;
     this.targetModel = targetModel;
     // Use PrioritizedReplayBuffer
@@ -147,7 +147,6 @@ export class DQNAgent {
     this.gamma = gamma;
     this.epsilon = epsilon;
     this.minEpsilon = minEpsilon;
-    this.epsilonDecay = epsilonDecay;
     this.optimizer = tf.train.adam(learningRate);
 
     this.opMap = new Map();
@@ -167,12 +166,12 @@ export class DQNAgent {
 
     // 1. Field (6次元) - 例: 500で正規化 (より大きなスケールに対応)
     for (const value of state.field.values) {
-      vector.push(value / 500.0); 
+      vector.push(value / 100.0); 
     }
 
-    // 2. Num (4次元) - 例: 5で正規化
+    // 2. Num (4次元) - 例: 10で正規化
     for (const value of state.num.values) {
-      vector.push(value / 5.0);
+      vector.push(value / 10.0);
     }
 
     // 3. Op (4スロット * 12次元 = 48次元)
@@ -222,13 +221,6 @@ export class DQNAgent {
 
   remember(state, action, reward, nextState, done) {
     this.replayBuffer.add({ state, action, reward, nextState, done });
-  }
-
-  // 追加: epsilon 減衰を独立化
-  decayEpsilon() {
-    if (this.epsilon > this.minEpsilon) {
-      this.epsilon = Math.max(this.minEpsilon, this.epsilon * this.epsilonDecay);
-    }
   }
 
   async replay(batchSize, beta) {
