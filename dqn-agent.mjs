@@ -302,18 +302,37 @@ export class DQNAgent {
     this.targetModel.setWeights(this.model.getWeights());
   }
 
+  
   getValidActionMask(state, game) {
       const mask = new Array(this.actions.length).fill(false);
       
+      // state から現在の valid 状態を取得  (L27)
+      const fieldValid = state.field.valid;
+      const opValid = state.op.valid;
+      const numValid = state.num.valid;
+
       for (let i = 0; i < this.actions.length; i++) {
-          const action = this.actions[i];
+          const action = this.actions[i]; // {field: f, op: o, num: n}
+          
+          // 1. まず、選択しようとしているカード自体が有効か (valid=true) か？
+          if (!fieldValid[action.field] || !opValid[action.op]) {
+              mask[i] = false;
+              continue;
+          }
+
           const field = state.field.values[action.field];
           const op = state.op.values[action.op];
-          const num = state.num.values[action.num];
           
           if (!op.r_param) {
+              // パラメータ不要の演算 (root, pop など)  (L84)
               mask[i] = op.isFValid(field);
           } else {
+              // 2. パラメータ必要なら、num も valid か？
+              if (!numValid[action.num]) {
+                  mask[i] = false;
+                  continue;
+              }
+              const num = state.num.values[action.num];
               mask[i] = op.isFValid(field) && op.isPValid(num);
           }
       }
