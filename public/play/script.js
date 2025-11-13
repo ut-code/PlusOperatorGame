@@ -190,31 +190,12 @@ class Game {
 
 		this.opgen = new WeightRandom(getOpPriority(level));
 
-		const easyOps = ['add', 'sub', 'mul', 'div'];
-		const normalOps = ['rem', 'root', 'd', 'gcd'];
-		const hardOps = ['and', 'or', 'xor', 'pop'];
-
-		let enabledOps = [];
-		switch (level) {
-			case 'easy':
-				enabledOps = easyOps;
-				break;
-			case 'normal':
-				enabledOps = [...easyOps, ...normalOps];
-				break;
-			case 'hard':
-				enabledOps = [...easyOps, ...normalOps, ...hardOps];
-				break;
-			default:
-				enabledOps = easyOps;
-		}
-
-		this.ops = Op.list.filter(op => enabledOps.includes(op.name));
+		Op.list = Op.list;
 
 		this.state = {
 			field: new State('field', FIELD_COUNT, () => Math.floor(Math.random() * 18 + 2), null, rule === 'battle'),
 			num: new State('num', NUM_COUNT, () => Math.floor(Math.random() * 6), null, rule === 'battle'),
-			op: new State('op', OP_COUNT, () => Math.floor(Math.random() * this.ops.length), this, rule === 'battle'),
+			op: new State('op', OP_COUNT, () => this.opgen.get(), this, rule === 'battle'),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -231,12 +212,12 @@ class Game {
 
 		this.state.num.filter(() => true);
 
-		this.state.field.make(this.ops[op].calc(field, num));
+		this.state.field.make(Op.list[op].calc(field, num));
 		this.state.op.make();
 		this.state.num.make();
 
 		this.onapply(
-			{ field, op: this.ops[op], num },
+			{ field, op: Op.list[op], num },
 			{ field: this.state.field.value, op: this.state.op.value, num: this.state.num.value },
 			{ field: this.state.field.chosen, op: this.state.op.chosen, num: this.state.num.chosen, apply: 0 }
 		);
@@ -261,7 +242,7 @@ class Game {
 	get valid() {
 		if (this.state.field.value === null) return false;
 		if (this.state.op.value === null) return false;
-		if (!this.ops[this.state.op.value].r_param) return true;
+		if (!Op.list[this.state.op.value].r_param) return true;
 		return this.state.num.value !== null;
 	}
 
@@ -273,8 +254,8 @@ class Game {
 			case 'op':
 				this.state.op.focus(index);
 				if (index < OP_COUNT) {
-					this.state.field.filter(this.ops[this.state.op.value]?.isFValid);
-					this.state.num.filter(this.ops[this.state.op.value]?.isPValid);
+					this.state.field.filter(Op.list[this.state.op.value]?.isFValid);
+					this.state.num.filter(Op.list[this.state.op.value]?.isPValid);
 				}
 				break;
 			case 'num':
@@ -302,21 +283,50 @@ class Game {
 
 var game;
 
-// 対戦相手の手を設定
-function moveCPU() {
+function moveWeakCPU() {
+	let op_type, num_index, num_value, field_index;
+	const fields = game.state.field.values,
+		field_can = [...Array(fields.length)].map((_, i) => i).filter((v) => fields[v] != 1);
+
+	while (true) {
+		op_type = game.opgen.get();
+		if (Op.list[op_type].r_param) {
+			num_value = Math.floor(Math.random() * 6);
+			num_index = Math.floor((Math.random() + 1) * NUM_COUNT);
+		}
+		else {
+			num_index = -1;
+		}
+		field_index = field_can[Math.floor(Math.random() * field_can.length)];
+
+		if (
+			Op.list[op_type].isFValid(fields[0]) &&
+			(!Op.list[op_type].r_param || Op.list[op_type].isPValid(num_value))
+		) break;
+	}
+
 	return {
 		op: {
 			index: Math.floor((Math.random() + 1) * OP_COUNT),
-			type: 8
+			type: op_type
 		},
 		num: {
-			index: -1,//Math.floor((Math.random() + 1) * NUM_COUNT),
-			value: 0
+			index: num_index,
+			value: num_value
 		},
 		field: {
-			index: 0
+			index: field_index
 		}
-	}
+	};
+}
+
+function moveStrongCPU() {
+}
+
+// 対戦相手の手を設定
+function moveCPU() {
+	return moveWeakCPU();
+	//return moveStrongCPU();
 }
 
 const cards = {
@@ -527,7 +537,7 @@ async function applyAnimation(old, renew, index, user = true) {
 	for (const key of rest)
 		ele[key].classList.remove('display');
 
-	displayOperator(index.op, game.ops[renew.op].name);
+	displayOperator(index.op, Op.list[renew.op].name);
 	displayNumber(index.num, renew.num);
 
 	ele.apply.classList.add('invalid');
@@ -572,13 +582,13 @@ async function applyAnimation(old, renew, index, user = true) {
 
 async function applyCPUAnimation() {
 	const move = moveCPU();
-	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type];
+	const field_value = game.state.field.values[move.field.index], op = Op.list[move.op.type];
 	game.state.op.values[move.op.index] = move.op.type;
 
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	game.click('field', move.field.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
-	displayOperator(move.op.index, game.ops[move.op.type].name, false);
+	displayOperator(move.op.index, Op.list[move.op.type].name, false);
 	game.click('op', move.op.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
 	if (op.r_param) {
@@ -652,8 +662,8 @@ function init() {
 	State.oninit = (key, index, value, game) => {
 		switch (key) {
 			case 'op':
-				if (game && game.ops[value]) {
-					displayOperator(index, game.ops[value].name);
+				if (game && Op.list[value]) {
+					displayOperator(index, Op.list[value].name);
 				}
 				break;
 			case 'num':
