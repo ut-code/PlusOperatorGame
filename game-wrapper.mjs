@@ -105,19 +105,19 @@ export class GameWrapper {
     const done = this.game.cleared;
     
     if (done) {
-      reward = 100;
+      reward = 1;
     } else if (!moveSuccessful) {
       reward = -1;
     } else {
       const prevSum = previousFieldValues.reduce((a, b) => a + b, 0);
       const currSum = currentFieldValues.reduce((a, b) => a + b, 0);
       const improvement = prevSum - currSum;
-      reward = improvement / 10;
+      reward = improvement / 50;
       
       const prevDistance = previousFieldValues.reduce((sum, v) => sum + Math.abs(v - 1), 0);
       const currDistance = currentFieldValues.reduce((sum, v) => sum + Math.abs(v - 1), 0);
       if (currDistance < prevDistance) {
-        reward += 0.1;
+        reward += 0.01;
       }
     }
     
