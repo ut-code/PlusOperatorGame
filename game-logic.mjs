@@ -53,6 +53,13 @@ export class State {
 		// This is a placeholder, as the original was UI-related.
 	}
 	// isValid(value)がtrueのカードのみ有効にする
+	/**
+     * カードの有効状態（フィルタ）をすべてリセットし、選択も解除する
+     */
+    resetFilter() {
+        this.valid.fill(true);
+        this.focus(-1); 
+    }
 	filter(isValid) {
 		this.values.forEach((value, i) => {
 			const valid = i >= this.count || (isValid ? isValid(value) : true);
@@ -118,7 +125,13 @@ export class Game {
 
 	// 演算開始
 	apply() {
-		if (!this.valid) return false;
+		if (!this.valid) {
+            // 申請が無効だった場合、フィルタと選択状態をすべてリセットする
+            this.state.field.resetFilter();
+            this.state.op.resetFilter();
+            this.state.num.resetFilter();
+			return false;
+        }
 
 		const field = this.state.field.value;
 		const op = this.state.op.value;
@@ -128,9 +141,10 @@ export class Game {
 		this.state.op.make(this.ops[this.opgen.get()]);
 		this.state.num.make();
 
-		this.state.field.focus(-1);
-		this.state.op.focus(-1);
-		this.state.num.focus(-1);
+		// フィルタ状態をリセットし、選択も解除する
+		this.state.field.resetFilter();
+		this.state.op.resetFilter(); // op もリセット
+		this.state.num.resetFilter();
 		this.moves++;
         return true;
 	}

@@ -5,6 +5,8 @@ import * as tf from '@tensorflow/tfjs-node';      // この行を追加
 import { Op } from './game-logic.mjs'; // 忘れずに追加
 import { promises as fs } from 'fs';
 
+const drivePath = '/content/drive/MyDrive/dqn-project';
+
 function formatBytes(bytes) {
     return (bytes / 1024 / 1024).toFixed(2) + ' MB';
 }
@@ -16,7 +18,7 @@ function logMemory() {
 }
 
 const MAX_MOVES_PER_EPISODE = 200;
-const EPISODES = 100000;
+const EPISODES = 500000;
 const BATCH_SIZE = 32;
 const SAVE_INTERVAL = 1000;
 const LOG_INTERVAL = 100;
@@ -105,10 +107,10 @@ async function main() {
     console.log("=" .repeat(60));
     console.log("DQN Plus Operator Training Environment");
     console.log("=" .repeat(60));
-    
-    await ensureDirectory('./dqn-model');
-    await ensureDirectory('./training_logs');
-    
+
+    await ensureDirectory(`${drivePath}/dqn-model`);
+    await ensureDirectory(`${drivePath}/training_logs`);
+
     const opList = Op.list;
     const stateSize = calculateStateSize(opList.length);
     const currentConfig = curriculum[currentLevel];
@@ -126,7 +128,7 @@ async function main() {
     console.log(`Operators: ${opList.map(op => op.name).join(', ')}`);
     
     let model, targetModel, agent;
-    const modelPath = './dqn-model/model.json';
+    const modelPath = `${drivePath}/dqn-model/model.json`;
     
     try {
         await fs.access(modelPath);
@@ -273,7 +275,7 @@ async function main() {
         
         if ((episode + 1) % SAVE_INTERVAL === 0) {
             console.log(`\n💾 Saving model at episode ${episode + 1}...`);
-            await saveModelSmart(model, './dqn-model');
+            await saveModelSmart(model, `${drivePath}/dqn-model`);
             
             const stats = {
                 episode: episode + 1,
@@ -285,9 +287,10 @@ async function main() {
                 clearRate: (recentClears.reduce((a, b) => a + b, 0) / recentClears.length) * 100
             };
             
+         
             await fs.writeFile(
-                `./training_logs/stats_ep${episode + 1}.json`,
-                JSON.stringify(stats, null, 2)
+            `${drivePath}/training_logs/stats_ep${episode + 1}.json`,
+            JSON.stringify(stats, null, 2)
             );
             console.log(`✓ Model and stats saved.\n`);
         }

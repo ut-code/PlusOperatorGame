@@ -1,0 +1,9 @@
+{
+  "episode": 1000,
+  "level": 0,
+  "epsilon": 0.9742857142857143,
+  "beta": 0.41714285714285715,
+  "totalWins": 0,
+  "avgReward": -61.847999999999885,
+  "clearRate": 0
+}
