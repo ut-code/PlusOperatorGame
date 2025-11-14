@@ -20,7 +20,7 @@
   "homepage": "https://github.com/ut-code/PlusOperatorGame#readme",
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0",
-    "@tensorflow/tfjs-node": "^4.22.0",
+    "@tensorflow/tfjs-core": "latest",
     "express": "^5.1.0"
   }
 }

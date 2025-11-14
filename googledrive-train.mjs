@@ -176,7 +176,7 @@ async function main() {
     console.log("Starting Training...");
     console.log("=".repeat(60) + "\n");
     
-    const EPSILON_START = 1.0;
+    const EPSILON_START = 0.9;
     const EPSILON_END = 0.1;
     const BETA_START = 0.4;
     const BETA_END = 1.0;

@@ -1,10 +1,10 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';      // この行を追加
 
-export function buildModel(inputSize, outputSize, hiddenLayers = [128, 128]) {
+export function createModel(stateSize, actionSize, hiddenLayers = [128, 128]) {
   const model = tf.sequential();
   
   model.add(tf.layers.dense({
-    inputShape: [inputSize],
+    inputShape: [stateSize],
     units: hiddenLayers[0],
     activation: 'relu',
     kernelInitializer: 'heNormal'
@@ -23,7 +23,7 @@ export function buildModel(inputSize, outputSize, hiddenLayers = [128, 128]) {
   }
   
   model.add(tf.layers.dense({
-    units: outputSize,
+    units: actionSize,
     activation: 'linear',
     kernelInitializer: 'heNormal'
   }));

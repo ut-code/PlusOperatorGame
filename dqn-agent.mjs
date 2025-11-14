@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 
 // +++ SumTree for efficient sampling +++
 class SumTree {

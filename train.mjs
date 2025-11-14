@@ -1,9 +1,9 @@
+import { Game, Op } from './game-logic.mjs';
+import * as tf from '@tensorflow/tfjs';      // この行を追加
+import { promises as fs } from 'fs';
 import { DQNAgent } from './dqn-agent.mjs';
 import { GameWrapper } from './game-wrapper.mjs';
-import { buildModel, calculateStateSize } from './model-builder.mjs';
-import * as tf from '@tensorflow/tfjs-node';      // この行を追加
-import { Op } from './game-logic.mjs'; // 忘れずに追加
-import { promises as fs } from 'fs';
+import { createModel, calculateStateSize } from './model-builder.mjs';
 
 function formatBytes(bytes) {
     return (bytes / 1024 / 1024).toFixed(2) + ' MB';
@@ -90,13 +90,6 @@ async function saveModelSmart(model, dir) {
   }
 }
 
-  await fs.writeFile(`${dir}/model.json`, JSON.stringify(modelJson, null, 2), 'utf8');
-
-  if (artifacts.weightData) {
-    const buf = Buffer.from(new Uint8Array(artifacts.weightData));
-    await fs.writeFile(`${dir}/weights.bin`, buf);
-  }
-
 
 function getDifficultyConfig(levelName) {
     const ops = {
@@ -154,8 +147,8 @@ async function main() {
         console.log("Model loaded successfully.");
     } catch (error) {
         console.log("\nNo existing model found, creating a new one.");
-        model = buildModel(stateSize, numActions, [256, 256, 128]);
-        targetModel = buildModel(stateSize, numActions, [256, 256, 128]);
+        model = createModel(stateSize, numActions, [256, 256, 128]);
+        targetModel = createModel(stateSize, numActions, [256, 256, 128]);
         targetModel.setWeights(model.getWeights());
     }
     
@@ -178,7 +171,7 @@ async function main() {
     console.log("Starting Training...");
     console.log("=".repeat(60) + "\n");
     
-    const EPSILON_START = 1.0;
+    const EPSILON_START = 0.9;
     const EPSILON_END = 0.1;
     const BETA_START = 0.4;
     const BETA_END = 1.0;
@@ -205,18 +198,34 @@ async function main() {
         let done = false;
         let moves = 0;
         let lastInfo = {};
+        let consecutiveInvalidActions = 0;
         
-        // Update epsilon and beta based on progress within the current level
+        // Update epsilon and beta based on progress
         episodesInLevel++;
         const progressInLevel = Math.min(1.0, episodesInLevel / LEVEL_PROGRESS_EPISODES);
+
+        // Dynamically adjust epsilon based on how close the agent is to the level's threshold
+        const recentAvgReward = recentScores.length > 0 ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length : 0;
+        const currentThreshold = curriculum[currentLevel].threshold;
+        const closeness = currentThreshold > 0 ? Math.min(1.0, Math.max(0, recentAvgReward) / currentThreshold) : 0;
         
-        agent.epsilon = Math.max(EPSILON_END, EPSILON_START - (EPSILON_START - EPSILON_END) * progressInLevel);
+        agent.epsilon = Math.max(EPSILON_END, EPSILON_START - (EPSILON_START - EPSILON_END) * closeness);
         const beta = BETA_START + (BETA_END - BETA_START) * progressInLevel;
 
         while (!done && moves < MAX_MOVES_PER_EPISODE) {
             const action = agent.chooseAction(state, env);
             const { state: nextState, reward, done: isDone, info } = env.step(action);
             
+            if (info && info.reason === 'Invalid action attempted') {
+                consecutiveInvalidActions++;
+            } else {
+                consecutiveInvalidActions = 0;
+            }
+
+            if (consecutiveInvalidActions >= 10) {
+                console.error(`[ERROR] 10 consecutive invalid actions detected in episode ${episode + 1}. Restarting episode.`);
+                break;
+            }
             
             agent.remember(state, action, reward, nextState, isDone);
             lastInfo = info;
@@ -320,24 +329,6 @@ async function main() {
             console.error(`Error details: ${saveError.message}`);
             console.log("Continuing training without saving...\n");
           }
-            console.log(`\n💾 Saving model at episode ${episode + 1}...`);
-            await saveModelSmart(model, './dqn-model');
-            
-            const stats = {
-                episode: episode + 1,
-                level: currentLevel,
-                epsilon: agent.epsilon,
-                beta: beta,
-                totalWins: totalWins,
-                avgReward: recentScores.reduce((a, b) => a + b, 0) / recentScores.length,
-                clearRate: (recentClears.reduce((a, b) => a + b, 0) / recentClears.length) * 100
-            };
-            
-            await fs.writeFile(
-                `./training_logs/stats_ep${episode + 1}.json`,
-                JSON.stringify(stats, null, 2)
-            );
-            console.log(`✓ Model and stats saved.\n`);
         }
     }
     
