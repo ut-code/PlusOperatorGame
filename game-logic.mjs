@@ -125,13 +125,7 @@ export class Game {
 
 	// 演算開始
 	apply() {
-		if (!this.valid) {
-            // 申請が無効だった場合、フィルタと選択状態をすべてリセットする
-            this.state.field.resetFilter();
-            this.state.op.resetFilter();
-            this.state.num.resetFilter();
-			return false;
-        }
+		if (!this.valid) return false;
 
 		const field = this.state.field.value;
 		const op = this.state.op.value;
@@ -165,9 +159,12 @@ export class Game {
 			case 'op':
 				this.state.op.focus(index);
 				if (this.state.op.value) {
-					this.state.field.filter(this.state.op.value.isFValid);
-					this.state.num.filter(this.state.op.value.isPValid);
+					// 以下のフィルタリングは getValidActionMask (dqn-agent.mjs) が
+					// 事前チェックで行うため、ここでは副作用を発生させない。
+					// this.state.field.filter(this.state.op.value.isFValid);
+					// this.state.num.filter(this.state.op.value.isPValid);
 				}
+				break;
 				break;
 			case 'num':
 				this.state.num.focus(index);

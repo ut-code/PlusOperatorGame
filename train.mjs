@@ -42,35 +42,53 @@ async function ensureDirectory(dirPath) {
 }
 
 // file:// ハンドラがあればそれを使い、なければ artifacts を取得して手動で保存する
+// file:// ハンドラがあればそれを使い、なければ artifacts を取得して手動で保存する
 async function saveModelSmart(model, dir) {
   const url = `file://${dir}`;
+  
+  // === 1. 標準の save ハンドラを試す ===
   try {
     const handlers = tf.io.getSaveHandlers(url);
     if (handlers && handlers.length > 0) {
       // Node の file:// ハンドラが使える場合
       await model.save(url);
-      return;
+      return true; // 成功
     }
   } catch (e) {
-    // getSaveHandlers が失敗しても fallback へ
+    console.warn(`\n[Save Warning] Standard model.save(url) failed: ${e.message}. Attempting fallback...`);
   }
 
-  // fallback: artifacts を取得して自前で書き出す
-  const artifacts = await model.save(tf.io.withSaveHandler(async (artifacts) => artifacts));
-  await fs.mkdir(dir, { recursive: true });
+  // === 2. フォールバック (手動書き出し) ===
+  try {
+    const artifacts = await model.save(tf.io.withSaveHandler(async (artifacts) => artifacts));
+    await fs.mkdir(dir, { recursive: true });
 
-  const modelJson = {
-    modelTopology: artifacts.modelTopology || null,
-    format: artifacts.format || 'layers-model',
-    generatedBy: artifacts.generatedBy || 'custom-save',
-    convertedBy: artifacts.convertedBy || null,
-    weightsManifest: [
-      {
-        paths: ['weights.bin'],
-        weights: artifacts.weightSpecs || []
-      }
-    ]
-  };
+    const modelJson = {
+      modelTopology: artifacts.modelTopology || null,
+      format: artifacts.format || 'layers-model',
+      generatedBy: artifacts.generatedBy || 'custom-save',
+      convertedBy: artifacts.convertedBy || null,
+      weightsManifest: [
+        {
+          paths: ['weights.bin'],
+          weights: artifacts.weightSpecs || []
+        }
+      ]
+    };
+
+    await fs.writeFile(`${dir}/model.json`, JSON.stringify(modelJson, null, 2), 'utf8');
+
+    if (artifacts.weightData) {
+      const buf = Buffer.from(new Uint8Array(artifacts.weightData));
+      await fs.writeFile(`${dir}/weights.bin`, buf);
+    }
+    return true; // 成功
+  
+  } catch (fallbackError) {
+    console.error(`\n[Save Error] Fallback save failed: ${fallbackError.message}`);
+    return false; // 失敗
+  }
+}
 
   await fs.writeFile(`${dir}/model.json`, JSON.stringify(modelJson, null, 2), 'utf8');
 
@@ -78,7 +96,7 @@ async function saveModelSmart(model, dir) {
     const buf = Buffer.from(new Uint8Array(artifacts.weightData));
     await fs.writeFile(`${dir}/weights.bin`, buf);
   }
-}
+
 
 function getDifficultyConfig(levelName) {
     const ops = {
@@ -164,7 +182,7 @@ async function main() {
     const EPSILON_END = 0.1;
     const BETA_START = 0.4;
     const BETA_END = 1.0;
-    const LEVEL_PROGRESS_EPISODES = 35000;
+    const LEVEL_PROGRESS_EPISODES = 100000;
 
     let episodeRewards = [];
     let recentScores = [];
@@ -272,6 +290,36 @@ async function main() {
         }
         
         if ((episode + 1) % SAVE_INTERVAL === 0) {
+            try {
+            console.log(`\n💾 Saving model at episode ${episode + 1}...`);
+            const saveSuccess = await saveModelSmart(model, './dqn-model');
+            
+            const stats = {
+                episode: episode + 1,
+                level: currentLevel,
+                epsilon: agent.epsilon,
+                beta: beta,
+                totalWins: totalWins,
+                avgReward: recentScores.length > 0 ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length : 0,
+                clearRate: recentClears.length > 0 ? (recentClears.reduce((a, b) => a + b, 0) / recentClears.length) * 100 : 0
+            };
+            
+            await fs.writeFile(
+                `./training_logs/stats_ep${episode + 1}.json`,
+                JSON.stringify(stats, null, 2)
+            );
+
+            if (saveSuccess) {
+              console.log(`✓ Model and stats saved.\n`);
+            } else {
+              console.log(`✓ Stats saved, but model save failed (see error above).\n`);
+            }
+          
+          } catch (saveError) {
+            console.error(`\n[Save Error] Failed to write files at episode ${episode + 1}.`);
+            console.error(`Error details: ${saveError.message}`);
+            console.log("Continuing training without saving...\n");
+          }
             console.log(`\n💾 Saving model at episode ${episode + 1}...`);
             await saveModelSmart(model, './dqn-model');
             
