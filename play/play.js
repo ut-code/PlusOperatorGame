@@ -1,8 +1,20 @@
+let qTable = {};
 const params = new URLSearchParams(window.location.search);
 const level = params.get('level') || 'easy';
 const rule = params.get('rule') || 'solo';
 
 const FIELD_COUNT = 6, OP_COUNT = 4, NUM_COUNT = 4;
+
+// QテーブルからCPUの状態キーを生成する
+function getStateKeyForCPU(state) {
+    // AIモデルはプレイヤー視点（最初の6,4,4個の要素）で学習されているため、
+    // CPU（敵）の状態をプレイヤー視点に変換してQテーブルを引く
+    const field = state.field.values.slice(FIELD_COUNT).join(',');
+    const ops = state.op.values.slice(OP_COUNT).map(opIdx => game.ops[opIdx]?.name || 'unknown').join(',');
+    const nums = state.num.values.slice(NUM_COUNT).join(',');
+    return `F:${field}|O:${ops}|N:${nums}`;
+}
+
 
 // 演算選択用の重み付き乱数
 class WeightRandom {
@@ -302,22 +314,135 @@ class Game {
 
 var game;
 
-// 対戦相手の手を設定
-function moveCPU() {
-	return {
-		op: {
-			index: Math.floor((Math.random() + 1) * OP_COUNT),
-			type: 8
-		},
-		num: {
-			index: -1,//Math.floor((Math.random() + 1) * NUM_COUNT),
-			value: 0
-		},
-		field: {
-			index: 0
-		}
-	}
+// 対戦相手の手を設定 (Easy AI: ランダム)
+function moveCPU_Easy() {
+    // 1. 攻撃対象のフィールドをランダムに決定
+    // 50%の確率で相手（プレイヤー）のフィールド、50%の確率で自分（CPU）のフィールド
+    const attackPlayer = Math.random() < 0.5; 
+    
+    let targetFieldCardIndex;
+    if (attackPlayer) {
+        // プレイヤーのフィールド (インデックス 0 から FIELD_COUNT - 1)
+        targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT);
+    } else {
+        // CPU自身のフィールド (インデックス FIELD_COUNT から FIELD_COUNT * 2 - 1)
+        targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT) + FIELD_COUNT;
+    }
+
+    // 2. CPUが使用するリソース（手札）をランダムに決定
+
+    // CPUのop手札 (インデックス OP_COUNT から OP_COUNT * 2 - 1)
+    const cpuOpLocalIndex = Math.floor(Math.random() * OP_COUNT);
+    const cpuOpCardIndex = cpuOpLocalIndex + OP_COUNT;
+
+    // CPUのnum手札 (インデックス NUM_COUNT から NUM_COUNT * 2 - 1)
+    const cpuNumLocalIndex = Math.floor(Math.random() * NUM_COUNT);
+    const cpuNumCardIndex = cpuNumLocalIndex + NUM_COUNT;
+
+
+    // 3. `applyCPUAnimation`が期待する形式に変換する
+    
+    // 選択したopカードが示す、実際の演算（game.ops配列内のインデックス）
+    const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
+    
+    // 選択したnumカードが示す、実際の数値
+    const numValue = game.state.num.values[cpuNumCardIndex];
+
+    // `applyCPUAnimation` 関数が期待する形式のオブジェクトを作成
+    const move = {
+        op: { index: cpuOpCardIndex, type: opIndexInGameOps }, // typeはgame.opsのインデックス
+        num: { index: cpuNumCardIndex, value: numValue },      // valueは実際の数値
+        field: { index: targetFieldCardIndex }                 // indexはグローバルインデックス (0-11)
+    };
+
+    return move;
 }
+
+// 対戦相手の手を設定 (Normal/Hard AI: 全探索)
+function moveCPU_NormalHard() {
+    let bestMove = null;
+    let maxChange = -Infinity; // 評価値の最大を保持
+
+    // ループ1: CPUのop手札 (4枚)
+    for (let opLocalIndex = 0; opLocalIndex < OP_COUNT; opLocalIndex++) {
+        const cpuOpCardIndex = opLocalIndex + OP_COUNT;
+        const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
+        const opObject = game.ops[opIndexInGameOps];
+
+        // opが数値を必要とするか (r_param)
+        const numIterations = opObject.r_param ? NUM_COUNT : 1;
+
+        // ループ2: CPUのnum手札 (r_param=falseなら1回だけダミーで実行)
+        for (let numLocalIndex = 0; numLocalIndex < numIterations; numLocalIndex++) {
+            
+            // r_param=falseの場合、numIndex=0(CPU手札の先頭)をダミーとして使う
+            const cpuNumCardIndex = (opObject.r_param ? numLocalIndex : 0) + NUM_COUNT;
+            const numValue = opObject.r_param ? game.state.num.values[cpuNumCardIndex] : null;
+
+            // ループ3: 対象フィールド (全12枚)
+            for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
+                
+                const fieldValue = game.state.field.values[targetFieldCardIndex];
+
+                // 妥当性チェック (Opクラスの定義に基づき、無効な手は除外)
+                if (!opObject.isFValid(fieldValue)) {
+                    continue;
+                }
+                if (opObject.r_param && !opObject.isPValid(numValue)) {
+                    continue;
+                }
+
+                // シミュレーション
+                const newValue = opObject.calc(fieldValue, numValue);
+
+                // 評価
+                let currentChange = -Infinity;
+                const isPlayerField = targetFieldCardIndex < FIELD_COUNT;
+
+                if (isPlayerField) {
+                    // プレイヤー側 (目標: 数字を大きくする)
+                    // 評価値 = (計算後の値 - 計算前の値)
+                    currentChange = newValue - fieldValue;
+                } else {
+                    // CPU側 (目標: 1に近づける)
+                    // 評価値 = (1からの距離の減少量)
+                    currentChange = Math.abs(fieldValue - 1) - Math.abs(newValue - 1);
+                }
+
+                // 最善手の更新
+                if (currentChange > maxChange) {
+                    maxChange = currentChange;
+                    bestMove = {
+                        op: { index: cpuOpCardIndex, type: opIndexInGameOps },
+                        num: { index: cpuNumCardIndex, value: numValue },
+                        field: { index: targetFieldCardIndex }
+                    };
+                }
+            }
+        }
+    }
+
+    // もし有効な手が一つも見つからなかった場合（例：すべての手が無効だった場合）
+    // フォールバックとしてランダムな手（Easy AI）を実行する
+    if (!bestMove) {
+        console.warn("CPU (Normal/Hard): 有効な手が見つかりませんでした。ランダムな手にフォールバックします。");
+        return moveCPU_Easy();
+    }
+
+    return bestMove;
+}
+
+
+// CPUの行動を決定するメイン関数 (レベルに応じて分岐)
+function moveCPU() {
+    // グローバル変数 `level` を参照
+    if (level === 'easy') {
+        return moveCPU_Easy();
+    } else {
+        return moveCPU_NormalHard();
+    }
+}
+
 
 const cards = {
 	field: [...document.querySelectorAll('#field>.card'), ...rule === 'battle' ? document.querySelectorAll('#enemy_field>.card') : []],
@@ -571,10 +696,10 @@ async function applyAnimation(old, renew, index, user = true) {
 }
 
 async function applyCPUAnimation() {
-	const move = moveCPU();
+    // moveCPUがレベルに応じた最適な手を返す
+	const move = moveCPU(game); 
 	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type];
-	game.state.op.values[move.op.index] = move.op.type;
-
+	
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	game.click('field', move.field.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
@@ -587,22 +712,48 @@ async function applyCPUAnimation() {
 		await new Promise((resolve) => setTimeout(resolve, 800));
 	}
 
-	game.state.field.values[move.field.index] = op.calc(field_value, move.num.value);
+    // *** ここでCPUの手札を補充するロジックが必要 ***
+    // プレイヤーの apply() メソッドを参考に、CPU側の手札を .make() する
+    // (Stateクラスはchosen(選択中)のカードをmakeする仕様なので、
+    //  CPUが使ったカードのインデックスを一時的にchosenに設定する必要がある)
 
+    // 1. 選択状態を一時的にCPUが使ったカードに設定
+    game.state.field.chosen = move.field.index;
+    game.state.op.chosen = move.op.index;
+    if (op.r_param) {
+        game.state.num.chosen = move.num.index;
+    }
+
+    // 2. 計算結果をフィールドに反映 (make)
+    const newValue = op.calc(field_value, move.num.value);
+	game.state.field.make(newValue);
+    
+    // 3. CPUの手札を補充 (make)
+    game.state.op.make(); // 新しいopを生成
+    if (op.r_param) {
+        game.state.num.make(); // 新しいnumを生成
+    }
+
+    // 4. 選択状態をリセット (重要)
 	game.state.field.focus(-1);
 	game.state.op.focus(-1);
 	game.state.num.focus(-1);
-	//this.moves++;
+	//this.moves++; // CPUのmovesをカウントする場合
 
 	await applyAnimation(
 		{ field: field_value, op: op, num: move.num.value },
-		{ field: game.state.field.values[move.field.index], op: move.op.type, num: null },
+		// renewの値は、State.oninit が参照できるように、make() で生成された後の値を使う
+        { 
+            field: newValue, 
+            op: game.state.op.values[move.op.index], // 新しく生成されたop
+            num: op.r_param ? game.state.num.values[move.num.index] : null // 新しく生成されたnum
+        },
 		{ field: move.field.index, op: move.op.index, num: move.num.index, apply: 0 },
 		false
 	);
 }
-
-function displayOperator(index, name, hide = true) {
+//CPUの手札を見るために一時的にhide=falseにしている。後で元に戻す
+function displayOperator(index, name, hide = false) {
 	if (index >= OP_COUNT && hide) name = 'hidden';
 
 	const ele = cards.op[index];
@@ -626,8 +777,8 @@ function displayOperator(index, name, hide = true) {
 			break;
 	}
 }
-
-function displayNumber(index, num, hide = true) {
+//同上
+function displayNumber(index, num, hide = false) {
 	if (index === -1) return;
 	if (index >= NUM_COUNT && hide) cards.num[index].textContent = '?';
 	else cards.num[index].textContent = `${num}`;
@@ -670,12 +821,24 @@ function init() {
 	State.onenabled = (key, index) => cards[key][index].classList.remove('invalid');
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
-	document.getElementById('retry').addEventListener('click', () => start(2));
-	document.getElementById('return').addEventListener('click', () => location.replace('../../home/page/home.html'));
+	document.getElementById('retry').addEventListener('click', () => start(level, rule));
+	document.getElementById('return').addEventListener('click', () => location.replace('../home/home.html'));
 }
 
 async function start(level, rule) {
 	setupDesign(rule);
+
+    try {
+        const response = await fetch('/q-table.json');
+        if (response.ok) {
+            qTable = await response.json();
+            console.log('Q-table loaded successfully.');
+        } else {
+            console.error('Failed to load Q-table. CPU will use random moves.');
+        }
+    } catch (error) {
+        console.error('Error fetching Q-table:', error);
+    }
 
 	for (const key in cards) {
 		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする

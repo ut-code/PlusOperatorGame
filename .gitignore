@@ -1,5 +1,8 @@
-node_modules
 # Keep environment variables out of version control
 .env
 
 /generated/prisma
+node_modules/
+google-cloud-sdk/ 
+training_logs/
+google-cloud-cli-linux-x86_64.tar.gz
