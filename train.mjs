@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import { DQNAgent } from './dqn-agent.mjs';
 import { GameWrapper } from './game-wrapper.mjs';
 import { createModel, calculateStateSize } from './model-builder.mjs';
+import * as path from 'path';
 
 function formatBytes(bytes) {
     return (bytes / 1024 / 1024).toFixed(2) + ' MB';
@@ -16,7 +17,7 @@ function logMemory() {
 }
 
 const MAX_MOVES_PER_EPISODE = 200;
-const EPISODES = 100000;
+const EPISODES = 1000000;
 const BATCH_SIZE = 32;
 const SAVE_INTERVAL = 1000;
 const LOG_INTERVAL = 100;
@@ -90,6 +91,47 @@ async function saveModelSmart(model, dir) {
   }
 }
 
+// file:// ハンドラがあればそれを使い、なければ artifacts を取得して手動で読み込む
+async function loadModelSmart(dir) {
+  const url = `file://${path.resolve(dir, 'model.json')}`;
+  
+  // === 1. 標準の load ハンドラを試す ===
+  try {
+    const handlers = tf.io.getLoadHandlers(url);
+    if (handlers && handlers.length > 0) {
+      // Node の file:// ハンドラが使える場合
+      const model = await tf.loadLayersModel(url);
+      console.log("Model loaded using standard file:// handler.");
+      return model;
+    }
+  } catch (e) {
+    console.warn(`\n[Load Warning] Standard tf.loadLayersModel(url) failed: ${e.message}. Attempting fallback...`);
+  }
+
+  // === 2. フォールバック (手動読み込み) ===
+  try {
+    const modelJsonPath = path.join(dir, 'model.json');
+    const weightsBinPath = path.join(dir, 'weights.bin');
+
+    await fs.access(modelJsonPath);
+    await fs.access(weightsBinPath);
+
+    const modelJsonContent = await fs.readFile(modelJsonPath, 'utf8');
+    const modelJson = JSON.parse(modelJsonContent);
+    const weightData = await fs.readFile(weightsBinPath);
+
+    const model = await tf.loadLayersModel(tf.io.fromMemory(
+      modelJson.modelTopology,
+      modelJson.weightsManifest[0].weights,
+      weightData.buffer
+    ));
+    console.log("Model loaded using manual fallback.");
+    return model;
+  } catch (fallbackError) {
+    return null;
+  }
+}
+
 
 function getDifficultyConfig(levelName) {
     const ops = {
@@ -137,16 +179,17 @@ async function main() {
     console.log(`Operators: ${opList.map(op => op.name).join(', ')}`);
     
     let model, targetModel, agent;
-    const modelPath = './dqn-model/model.json';
     
-    try {
-        await fs.access(modelPath);
-        console.log("\nLoading existing model...");
-        model = await tf.loadLayersModel(`file://${modelPath}`);
-        targetModel = await tf.loadLayersModel(`file://${modelPath}`);
+    console.log("\nLoading existing model...");
+    model = await loadModelSmart('./dqn-model');
+
+    if (model) {
+        targetModel = createModel(stateSize, numActions, [256, 256, 128]);
+        targetModel.setWeights(model.getWeights());
         console.log("Model loaded successfully.");
-    } catch (error) {
-        console.log("\nNo existing model found, creating a new one.");
+    } else {
+        console.log("\nModel loading failed.");
+        console.log("Creating a new model instead.");
         model = createModel(stateSize, numActions, [256, 256, 128]);
         targetModel = createModel(stateSize, numActions, [256, 256, 128]);
         targetModel.setWeights(model.getWeights());
@@ -175,7 +218,7 @@ async function main() {
     const EPSILON_END = 0.1;
     const BETA_START = 0.4;
     const BETA_END = 1.0;
-    const LEVEL_PROGRESS_EPISODES = 100000;
+    const LEVEL_PROGRESS_EPISODES = 1000000;
 
     let episodeRewards = [];
     let recentScores = [];
@@ -301,7 +344,7 @@ async function main() {
         if ((episode + 1) % SAVE_INTERVAL === 0) {
             try {
             console.log(`\n💾 Saving model at episode ${episode + 1}...`);
-            const saveSuccess = await saveModelSmart(model, './dqn-model');
+            const saveSuccess = await saveModelSmart(model, path.resolve('./dqn-model'));
             
             const stats = {
                 episode: episode + 1,
@@ -339,7 +382,7 @@ async function main() {
     console.log(`Final Level: ${currentLevel}`);
     console.log(`Final Epsilon: ${agent.epsilon.toFixed(4)}`);
     
-    await saveModelSmart(model, './dqn-model');
+    await saveModelSmart(model, path.resolve('./dqn-model'));
     console.log("\n✓ Final model saved to ./dqn-model/");
 }
 

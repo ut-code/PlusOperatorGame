@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs';      // この行を追加
+import * as tf from '@tensorflow/tfjs';
 
 export function createModel(stateSize, actionSize, hiddenLayers = [128, 128]) {
   const model = tf.sequential();
