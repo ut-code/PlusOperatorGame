@@ -1,12 +1,26 @@
 import express from "express";
-import { readFileSync } from "node:fs";
-const app = express();
+import path from 'path'; 
+import { fileURLToPath } from 'url'; 
 
-app.use(express.static("."));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.static(path.join(__dirname, 'home')));
+
+app.use(express.static(path.join(__dirname, 'play')));
+
 
 app.get("/", (request, response) => {
-  response.send(readFileSync("./home/home.html", "utf-8"));
+  response.sendFile(path.join(__dirname, 'home', 'home.html'));
 });
 
+app.get("/play", (request, response) => {
+  response.sendFile(path.join(__dirname, 'play', 'play.html'));
+});
 
-app.listen(3000);
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
