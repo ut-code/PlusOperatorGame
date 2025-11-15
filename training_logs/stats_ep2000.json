@@ -1,9 +1,0 @@
-{
-  "episode": 2000,
-  "level": 0,
-  "epsilon": 0.9485714285714286,
-  "beta": 0.4342857142857143,
-  "totalWins": 0,
-  "avgReward": -64.10599999999991,
-  "clearRate": 0
-}
