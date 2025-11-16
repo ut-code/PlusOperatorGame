@@ -10,11 +10,9 @@
 body {
     width: 100vw;
     height: 100vh;
-
     display: flex;
     justify-content: center;
     align-items: center;
-
     user-select: none;
     overflow: hidden;
     font-family: 'Roboto', 'Noto Sans JP', sans-serif;
@@ -23,18 +21,43 @@ body {
 }
 
 #title {
-    font-size: 8rem;
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    font-size: 4rem;
     font-weight: 700;
+    z-index: 10;
+}
+
+#cpu_label {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 4rem;
+    font-weight: 700;
+    color: #333;
+    z-index: 10;
+}
+
+#player_label {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    font-size: 4rem;
+    font-weight: 700;
+    color: #333;
+    z-index: 10;
 }
 
 #area {
     position: relative;
-    background-color: #f0f8ff;
+    background-color: #fcfcfc;
     width: 100vw;
-    height: min(100vh, 60vw);
-
-    display: grid;
-    place-items: center;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
 }
 
 #field,
@@ -43,37 +66,68 @@ body {
     border-radius: 5rem;
     box-sizing: border-box;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-
-    width: 150rem;
-    height: 30rem;
-
+    width: 70vw;
+    height: 27vh;
     display: grid;
-    grid-auto-flow: column;
-    place-items: center;
+    grid-template-columns: auto repeat(6, auto);
+    justify-content: center;
+    align-items: center;
+    gap: 1vw;
 }
 
 #hand,
 #enemy_hand {
-    width: 150rem;
-    height: 20rem;
-
+    width: 85vw;
+    height: 15vh;
     display: grid;
-    grid-auto-flow: column;
-    justify-content: space-between;
+    grid-template-columns: 37vw 37vw;
+    justify-content: center;
+    align-items: center;
+    gap: 6vw;
+}
 
-    >div {
-        width: 73rem;
-        height: 20rem;
+#hand>div,
+#enemy_hand>div {
+    width: 100%;
+    height: 15vh;
+    background-color: #ffffff;
+    border-radius: 3rem;
+    box-sizing: border-box;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    justify-content: center;
+    align-items: center;
+    gap: 1vw;
+    position: relative;
+    padding-top: 3.5rem;
+}
 
-        background-color: #f5f5f5;
-        border-radius: 3rem;
-        box-sizing: border-box;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+#hand>div>h3,
+#enemy_hand>div>h3 {
+    position: absolute;
+    top: 1rem;
+    left: 2rem;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #555;
+    margin: 0;
+}
 
-        display: grid;
-        grid-auto-flow: column;
-        place-items: center;
-    }
+#num>h3,
+#enemy_num>h3 {
+    left: auto;
+    right: 2rem;
+}
+
+#field>h3,
+#enemy_field>h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #555;
+    justify-self: auto;
+    align-self: center;
+    margin: 0;
 }
 
 .card {
@@ -81,59 +135,80 @@ body {
     border: #158b68 0.5rem solid;
     border-radius: 1rem;
     box-sizing: border-box;
-
     width: 10rem;
     height: 12rem;
-
     font-size: 4rem;
-
     display: flex;
     justify-content: center;
     align-items: center;
-
     cursor: pointer;
-
     transition: 0.15s scale ease-out, 0.15s border-color linear, 0.15s background-color linear, 0.15s transform ease-out, 0.15s box-shadow ease-out;
     will-change: translate, scale, opacity, border-color, transform, box-shadow;
     backface-visibility: visible;
+}
 
-    #field &,
-    #enemy_field & {
-        width: 15rem;
-        height: 18rem;
-        border-width: 0.75rem;
-        border-radius: 1.5rem;
+#field .card,
+#enemy_field .card {
+    width: 30rem;
+    height: 80%;
+    border-width: 0.75rem;
+    border-radius: 1.5rem;
+    font-size: 6rem;
+}
 
-        font-size: 6rem;
-    }
+#hand .card,
+#enemy_hand .card {
+    width: auto;
+    height: 90%;
+    aspect-ratio: 15 / 18;
+    font-size: 4rem;
+}
 
-    &.chosen {
-        border-color: #00c78a;
-        background-color: #00c78a;
-        color: #fff;
-        scale: 1.2;
-    }
+#field .card.chosen,
+#hand .card.chosen {
+    border-color: #00c78a;
+    background-color: #00c78a;
+    color: #fff;
+    scale: 1.2;
+}
 
-    &.display {
-        border-color: #99f;
-        /* display時の色を青系に変更 */
-        scale: 1.2;
-    }
+#enemy_field .card.chosen,
+#enemy_hand .card.chosen {
+    border-color: #ef5350;
+    background-color: #ef5350;
+    color: #fff;
+    scale: 1.2;
+}
 
-    &:not(.invalid):not(#enemy_hand &):hover {
-        transform: translateY(-0.5rem);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-    }
+.card.display {
+    border-color: #99f;
+    scale: 1.2;
+}
 
-    &:not(.invalid):not(.chosen):not(#enemy_hand &):hover {
-        border-color: #00c78a;
-    }
+.card:not(.invalid):not(#enemy_hand .card):not(#enemy_field .card):hover {
+    transform: translateY(-0.5rem);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
 
-    &.invalid {
-        background-color: #999;
-        cursor: not-allowed;
-        border-color: #777;
-    }
+.card:not(.invalid):not(.chosen):not(#enemy_hand .card):not(#enemy_field .card):hover {
+    border-color: #00c78a;
+}
+
+#enemy_hand .card,
+#enemy_field .card {
+    border-color: #b71c1c;
+}
+
+#enemy_field .card:not(.invalid):not(.chosen):hover {
+    border-color: #ef5350;
+    transform: translateY(-0.5rem);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.card.invalid {
+    background-color: #999;
+    cursor: not-allowed;
+    border-color: #777;
 }
 
 .is-animating .card {
@@ -151,71 +226,81 @@ body {
     height: 50rem;
     border-radius: 5rem;
     background-color: #fffe;
-
     opacity: 0;
     scale: 0;
     transition: 0.2s scale ease-out, 0.2s opacity linear;
-
     will-change: opacity, scale;
-
-    #clear-head {
-        color: #333;
-        font-size: 10rem;
-        text-align: center;
-    }
-
-    #clear-moves {
-        font-size: 5rem;
-        text-align: center;
-        color: #333;
-    }
-
-    #buttons {
-        display: grid;
-        grid-auto-flow: column;
-        place-items: center;
-
-        div {
-            text-align: center;
-            font-size: 4rem;
-            border: 0.5rem solid;
-            border-radius: 2rem;
-            width: 80%;
-            cursor: pointer;
-
-            &#retry {
-                border-color: #f33;
-            }
-
-            &#return {
-                border-color: #33f;
-            }
-        }
-    }
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+    padding: 2rem;
+    box-sizing: border-box;
 }
 
-h3 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #555;
+#clear-head {
+    color: #333;
+    font-size: 10rem;
+    text-align: center;
+}
+
+#clear-moves {
+    font-size: 5rem;
+    text-align: center;
+    color: #333;
+}
+
+#buttons {
+    display: grid;
+    grid-auto-flow: column;
+    place-items: center;
+    width: 100%;
+    gap: 2rem;
+}
+
+#buttons div {
+    text-align: center;
+    font-size: 4rem;
+    border: 0.5rem solid;
+    border-radius: 2rem;
+    width: 80%;
+    cursor: pointer;
+    padding: 1rem;
+    box-sizing: border-box;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+#buttons #retry {
+    border-color: #f33;
+    background-color: #ffe0e0;
+}
+
+#buttons #retry:hover {
+    background-color: #fdd;
+    transform: scale(1.02);
+}
+
+#buttons #return {
+    border-color: #33f;
+    background-color: #e0e0ff;
+}
+
+#buttons #return:hover {
+    background-color: #ddf;
+    transform: scale(1.02);
 }
 
 #apply {
     position: absolute;
     top: 50%;
-    right:18%;
-    transform: translateY(-50%);
+    right: 7.5%;
+    transform: translate(50%, -50%);
+    height: 13.5vh; /* Hand card height is 90% of its container (15vh) */
+    width: auto;
+    aspect-ratio: 15 / 18; /* Same aspect ratio as other cards */
 }
 
 #apply:hover {
-    transform: translateY(-50%) !important;
+    transform: translate(50%, -50%) !important;
     box-shadow: none;
-}
-
-#area {
-    h3 {
-        align-self: start;
-        justify-self: start;
-        margin: 1rem 0 0 2rem;
-    }
 }
