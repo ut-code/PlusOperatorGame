@@ -1,19 +1,8 @@
-let qTable = {};
 const params = new URLSearchParams(window.location.search);
 const level = params.get('level') || 'easy';
 const rule = params.get('rule') || 'solo';
 
 const FIELD_COUNT = 6, OP_COUNT = 4, NUM_COUNT = 4;
-
-// QテーブルからCPUの状態キーを生成する
-function getStateKeyForCPU(state) {
-    // AIモデルはプレイヤー視点（最初の6,4,4個の要素）で学習されているため、
-    // CPU（敵）の状態をプレイヤー視点に変換してQテーブルを引く
-    const field = state.field.values.slice(FIELD_COUNT).join(',');
-    const ops = state.op.values.slice(OP_COUNT).map(opIdx => game.ops[opIdx]?.name || 'unknown').join(',');
-    const nums = state.num.values.slice(NUM_COUNT).join(',');
-    return `F:${field}|O:${ops}|N:${nums}`;
-}
 
 
 // 演算選択用の重み付き乱数
@@ -360,76 +349,82 @@ function moveCPU_Easy() {
 
 // 対戦相手の手を設定 (Normal/Hard AI: 全探索)
 function moveCPU_NormalHard() {
-    let bestMove = null;
-    let maxChange = -Infinity; // 評価値の最大を保持
+    let bestPlayerAttackMove = null;
+    let maxPlayerScoreIncrease = -Infinity;
 
+    let bestCpuDefenseMove = null;
+    let maxCpuDistanceReduction = -Infinity;
+
+    // すべての可能な手をループ
     // ループ1: CPUのop手札 (4枚)
     for (let opLocalIndex = 0; opLocalIndex < OP_COUNT; opLocalIndex++) {
         const cpuOpCardIndex = opLocalIndex + OP_COUNT;
         const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
         const opObject = game.ops[opIndexInGameOps];
 
-        // opが数値を必要とするか (r_param)
         const numIterations = opObject.r_param ? NUM_COUNT : 1;
 
-        // ループ2: CPUのnum手札 (r_param=falseなら1回だけダミーで実行)
+        // ループ2: CPUのnum手札
         for (let numLocalIndex = 0; numLocalIndex < numIterations; numLocalIndex++) {
-            
-            // r_param=falseの場合、numIndex=0(CPU手札の先頭)をダミーとして使う
             const cpuNumCardIndex = (opObject.r_param ? numLocalIndex : 0) + NUM_COUNT;
             const numValue = opObject.r_param ? game.state.num.values[cpuNumCardIndex] : null;
 
             // ループ3: 対象フィールド (全12枚)
             for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
-                
                 const fieldValue = game.state.field.values[targetFieldCardIndex];
 
-                // 妥当性チェック (Opクラスの定義に基づき、無効な手は除外)
-                if (!opObject.isFValid(fieldValue)) {
-                    continue;
-                }
-                if (opObject.r_param && !opObject.isPValid(numValue)) {
+                // 妥当性チェック
+                if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {
                     continue;
                 }
 
-                // シミュレーション
                 const newValue = opObject.calc(fieldValue, numValue);
-
-                // 評価
-                let currentChange = -Infinity;
                 const isPlayerField = targetFieldCardIndex < FIELD_COUNT;
 
                 if (isPlayerField) {
-                    // プレイヤー側 (目標: 数字を大きくする)
-                    // 評価値 = (計算後の値 - 計算前の値)
-                    currentChange = newValue - fieldValue;
+                    // プレイヤーの盤面を攻撃する手
+                    const scoreIncrease = newValue - fieldValue;
+                    if (scoreIncrease > maxPlayerScoreIncrease) {
+                        maxPlayerScoreIncrease = scoreIncrease;
+                        bestPlayerAttackMove = {
+                            op: { index: cpuOpCardIndex, type: opIndexInGameOps },
+                            num: { index: cpuNumCardIndex, value: numValue },
+                            field: { index: targetFieldCardIndex }
+                        };
+                    }
                 } else {
-                    // CPU側 (目標: 1に近づける)
-                    // 評価値 = (1からの距離の減少量)
-                    currentChange = Math.abs(fieldValue - 1) - Math.abs(newValue - 1);
-                }
-
-                // 最善手の更新
-                if (currentChange > maxChange) {
-                    maxChange = currentChange;
-                    bestMove = {
-                        op: { index: cpuOpCardIndex, type: opIndexInGameOps },
-                        num: { index: cpuNumCardIndex, value: numValue },
-                        field: { index: targetFieldCardIndex }
-                    };
+                    // CPU自身の盤面を改善する手
+                    const distanceReduction = Math.abs(fieldValue - 1) - Math.abs(newValue - 1);
+                    if (distanceReduction > maxCpuDistanceReduction) {
+                        maxCpuDistanceReduction = distanceReduction;
+                        bestCpuDefenseMove = {
+                            op: { index: cpuOpCardIndex, type: opIndexInGameOps },
+                            num: { index: cpuNumCardIndex, value: numValue },
+                            field: { index: targetFieldCardIndex }
+                        };
+                    }
                 }
             }
         }
     }
 
-    // もし有効な手が一つも見つからなかった場合（例：すべての手が無効だった場合）
-    // フォールバックとしてランダムな手（Easy AI）を実行する
-    if (!bestMove) {
+    // 変化の大きい方を採用する
+    // bestPlayerAttackMove と bestCpuDefenseMove のどちらか、または両方が null の場合がある
+    if (bestPlayerAttackMove && bestCpuDefenseMove) {
+        if (maxPlayerScoreIncrease > maxCpuDistanceReduction) {
+            return bestPlayerAttackMove;
+        } else {
+            return bestCpuDefenseMove;
+        }
+    } else if (bestPlayerAttackMove) {
+        return bestPlayerAttackMove;
+    } else if (bestCpuDefenseMove) {
+        return bestCpuDefenseMove;
+    } else {
+        // 有効な手が見つからなかった場合
         console.warn("CPU (Normal/Hard): 有効な手が見つかりませんでした。ランダムな手にフォールバックします。");
         return moveCPU_Easy();
     }
-
-    return bestMove;
 }
 
 
@@ -752,8 +747,7 @@ async function applyCPUAnimation() {
 		false
 	);
 }
-//CPUの手札を見るために一時的にhide=falseにしている。後で元に戻す
-function displayOperator(index, name, hide = false) {
+function displayOperator(index, name, hide = true) {
 	if (index >= OP_COUNT && hide) name = 'hidden';
 
 	const ele = cards.op[index];
@@ -777,8 +771,7 @@ function displayOperator(index, name, hide = false) {
 			break;
 	}
 }
-//同上
-function displayNumber(index, num, hide = false) {
+function displayNumber(index, num, hide = true) {
 	if (index === -1) return;
 	if (index >= NUM_COUNT && hide) cards.num[index].textContent = '?';
 	else cards.num[index].textContent = `${num}`;
