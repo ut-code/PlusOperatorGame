@@ -252,6 +252,10 @@ class Game {
 	accept() {
 		this.input = true;
 		document.body.classList.remove('is-animating');
+		if (this.rule === 'battle') {
+			document.body.classList.remove('cpu-turn');
+			document.body.classList.add('player-turn');
+		}
 	}
 	block() {
 		this.input = false;
@@ -687,7 +691,11 @@ async function applyAnimation(old, renew, index, user = true) {
 	if (game.failed) {
 	}
 
-	if (game.rule === 'battle' && user) await applyCPUAnimation();
+	if (game.rule === 'battle' && user) {
+		document.body.classList.remove('player-turn');
+		document.body.classList.add('cpu-turn');
+		await applyCPUAnimation();
+	}
 }
 
 async function applyCPUAnimation() {
