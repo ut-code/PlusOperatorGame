@@ -76,7 +76,7 @@ class State {
 	// isValid(value)がtrueのカードのみ有効にする
 	filter(isValid) {
 		this.values.forEach((value, i) => {
-			const valid = i >= this.count || (isValid ? isValid(value) : true);
+			const valid = (this.key != 'field' && i >= this.count) || (isValid ? isValid(value) : true);
 			if (!this.valid[i] && valid) {
 				this.valid[i] = true;
 				State.onenabled(this.key, i);
@@ -215,7 +215,7 @@ class Game {
 		this.state = {
 			field: new State('field', FIELD_COUNT, () => Math.floor(Math.random() * 18 + 2), null, rule === 'battle'),
 			num: new State('num', NUM_COUNT, () => Math.floor(Math.random() * 6), null, rule === 'battle'),
-			op: new State('op', OP_COUNT, () => Math.floor(Math.random() * this.ops.length), this, rule === 'battle'),
+			op: new State('op', OP_COUNT, () => this.opgen.get(), this, rule === 'battle'),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -231,6 +231,7 @@ class Game {
 			num = this.state.num.value;
 
 		this.state.num.filter(() => true);
+		this.state.field.filter(() => true);
 
 		this.state.field.make(this.ops[op].calc(field, num));
 		this.state.op.make();
