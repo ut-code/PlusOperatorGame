@@ -486,6 +486,7 @@ function setupDesign(rule) {
 			break;
 		case 'battle':
 			document.documentElement.style.fontSize = 'min(0.6vh, 0.36vw)';
+			cards.apply[0].classList.add('battle');
 			break;
 	}
 }
@@ -618,7 +619,7 @@ async function applyAnimation(old, renew, index, user = true) {
 		},
 	], 500);
 
-	await new Promise((res) => setTimeout(res, 1000));
+	await new Promise((res) => setTimeout(res, 1500));
 
 	if (renew.field !== 1) ele.field.classList.remove('display');
 	// 場のカードを戻す
