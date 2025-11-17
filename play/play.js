@@ -764,13 +764,13 @@ function displayOperator(index, name, hide = true) {
 	ele.textContent = '';
 	switch (name) {
 		case 'pop':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.8rem">Popcount</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 2rem">Popcount</span>');
 			break;
 		case 'd':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.6rem">の約数の数</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 2rem">の約数の数</span>');
 			break;
 		case 'gcd':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.4rem">の最大公約数</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.7rem">の最大公約数</span>');
 			break;
 		default:
 			ele.textContent = {
