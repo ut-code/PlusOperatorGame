@@ -134,7 +134,7 @@ body {
     width: 12rem;
     aspect-ratio: 3 / 4;
     font-size: 4rem;
-    border: #00c78a 0.5rem solid;
+    border: #00c78a 0.2rem solid;
     border-radius: 1rem;
 
     background-color: #f8f8f8;
@@ -154,7 +154,7 @@ body {
         width: 24rem;
         font-size: 8rem;
         border-radius: 2rem;
-        border-width: 1rem;
+        border-width: 0.4rem;
     }
 
     #enemy_field &,
