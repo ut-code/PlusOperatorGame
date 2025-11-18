@@ -76,7 +76,7 @@ class State {
 	// isValid(value)がtrueのカードのみ有効にする
 	filter(isValid) {
 		this.values.forEach((value, i) => {
-			const valid = (this.key != 'field' && i >= this.count) || (isValid ? isValid(value) : true);
+			const valid = i >= this.count || (isValid ? isValid(value) : true);
 			if (!this.valid[i] && valid) {
 				this.valid[i] = true;
 				State.onenabled(this.key, i);
@@ -164,17 +164,17 @@ class Op {
 	getArrange(f, p) {
 		const arr = this.r_param
 			? {
-				field: -70,
-				op: -40,
-				num: -10,
-				apply: 20,
-				new_field: 60
+				field: -45,
+				op: -25,
+				num: -5,
+				apply: 15,
+				new_field: 40
 			}
 			: {
-				field: -50,
-				op: -20,
-				apply: 10,
-				new_field: 50
+				field: -35,
+				op: -15,
+				apply: 5,
+				new_field: 30
 			};
 		this.wrap(arr, f, p);
 		return arr;
@@ -215,7 +215,7 @@ class Game {
 		this.state = {
 			field: new State('field', FIELD_COUNT, () => Math.floor(Math.random() * 18 + 2), null, rule === 'battle'),
 			num: new State('num', NUM_COUNT, () => Math.floor(Math.random() * 6), null, rule === 'battle'),
-			op: new State('op', OP_COUNT, () => this.opgen.get(), this, rule === 'battle'),
+			op: new State('op', OP_COUNT, () => Math.floor(Math.random() * this.ops.length), this, rule === 'battle'),
 			apply: new State('apply', 1, () => '=')
 		};
 
@@ -231,7 +231,6 @@ class Game {
 			num = this.state.num.value;
 
 		this.state.num.filter(() => true);
-		this.state.field.filter(() => true);
 
 		this.state.field.make(this.ops[op].calc(field, num));
 		this.state.op.make();
@@ -255,8 +254,8 @@ class Game {
 		document.body.classList.remove('is-animating');
 		if (this.rule === 'battle') {
 			document.body.classList.remove('cpu-turn');
+			document.body.classList.add('player-turn');
 		}
-		document.body.classList.add('player-turn');
 	}
 	block() {
 		this.input = false;
@@ -310,137 +309,149 @@ var game;
 
 // 対戦相手の手を設定 (Easy AI: ランダム)
 function moveCPU_Easy() {
-	// 1. 攻撃対象のフィールドをランダムに決定
-	// 50%の確率で相手（プレイヤー）のフィールド、50%の確率で自分（CPU）のフィールド
-	const attackPlayer = Math.random() < 0.5;
+    // 1. 攻撃対象のフィールドを決定
+    // 値が1でない全てのフィールドカードを候補とする
+    const validTargets = [];
+    for (let i = 0; i < FIELD_COUNT * 2; i++) {
+        if (game.state.field.values[i] !== 1) {
+            validTargets.push(i);
+        }
+    }
 
-	let targetFieldCardIndex;
-	if (attackPlayer) {
-		// プレイヤーのフィールド (インデックス 0 から FIELD_COUNT - 1)
-		targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT);
-	} else {
-		// CPU自身のフィールド (インデックス FIELD_COUNT から FIELD_COUNT * 2 - 1)
-		targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT) + FIELD_COUNT;
-	}
+    let targetFieldCardIndex;
+    if (validTargets.length > 0) {
+        // 有効なターゲットからランダムに1つ選ぶ
+        targetFieldCardIndex = validTargets[Math.floor(Math.random() * validTargets.length)];
+    } else {
+        // 有効なターゲットがない場合（全カードが1など、通常はゲーム終了後）、
+        // クラッシュを避けるために元のランダムな選択ロジックにフォールバックする
+        console.warn("CPU (Easy): 有効なターゲットが見つかりませんでした。ランダムな手にフォールバックします。");
+        targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT * 2);
+    }
 
-	// 2. CPUが使用するリソース（手札）をランダムに決定
+    // 2. CPUが使用するリソース（手札）をランダムに決定
 
-	// CPUのop手札 (インデックス OP_COUNT から OP_COUNT * 2 - 1)
-	const cpuOpLocalIndex = Math.floor(Math.random() * OP_COUNT);
-	const cpuOpCardIndex = cpuOpLocalIndex + OP_COUNT;
+    // CPUのop手札 (インデックス OP_COUNT から OP_COUNT * 2 - 1)
+    const cpuOpLocalIndex = Math.floor(Math.random() * OP_COUNT);
+    const cpuOpCardIndex = cpuOpLocalIndex + OP_COUNT;
 
-	// CPUのnum手札 (インデックス NUM_COUNT から NUM_COUNT * 2 - 1)
-	const cpuNumLocalIndex = Math.floor(Math.random() * NUM_COUNT);
-	const cpuNumCardIndex = cpuNumLocalIndex + NUM_COUNT;
+    // CPUのnum手札 (インデックス NUM_COUNT から NUM_COUNT * 2 - 1)
+    const cpuNumLocalIndex = Math.floor(Math.random() * NUM_COUNT);
+    const cpuNumCardIndex = cpuNumLocalIndex + NUM_COUNT;
 
 
-	// 3. `applyCPUAnimation`が期待する形式に変換する
+    // 3. `applyCPUAnimation`が期待する形式に変換する
+    
+    // 選択したopカードが示す、実際の演算（game.ops配列内のインデックス）
+    const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
+    
+    // 選択したnumカードが示す、実際の数値
+    const numValue = game.state.num.values[cpuNumCardIndex];
 
-	// 選択したopカードが示す、実際の演算（game.ops配列内のインデックス）
-	const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
+    // `applyCPUAnimation` 関数が期待する形式のオブジェクトを作成
+    const move = {
+        op: { index: cpuOpCardIndex, type: opIndexInGameOps }, // typeはgame.opsのインデックス
+        num: { index: cpuNumCardIndex, value: numValue },      // valueは実際の数値
+        field: { index: targetFieldCardIndex }                 // indexはグローバルインデックス (0-11)
+    };
 
-	// 選択したnumカードが示す、実際の数値
-	const numValue = game.state.num.values[cpuNumCardIndex];
-
-	// `applyCPUAnimation` 関数が期待する形式のオブジェクトを作成
-	const move = {
-		op: { index: cpuOpCardIndex, type: opIndexInGameOps }, // typeはgame.opsのインデックス
-		num: { index: cpuNumCardIndex, value: numValue },      // valueは実際の数値
-		field: { index: targetFieldCardIndex }                 // indexはグローバルインデックス (0-11)
-	};
-
-	return move;
+    return move;
 }
 
 // 対戦相手の手を設定 (Normal/Hard AI: 全探索)
 function moveCPU_NormalHard() {
-	let bestPlayerAttackMove = null;
-	let maxPlayerScoreIncrease = -Infinity;
+    let bestPlayerAttackMove = null;
+    let maxPlayerScoreIncrease = -Infinity;
 
-	let bestCpuDefenseMove = null;
-	let maxCpuDistanceReduction = -Infinity;
+    let bestCpuDefenseMove = null;
+    let maxCpuDistanceReduction = -Infinity;
 
-	// すべての可能な手をループ
-	// ループ1: CPUのop手札 (4枚)
-	for (let opLocalIndex = 0; opLocalIndex < OP_COUNT; opLocalIndex++) {
-		const cpuOpCardIndex = opLocalIndex + OP_COUNT;
-		const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
-		const opObject = game.ops[opIndexInGameOps];
+    // すべての可能な手をループ
+    // ループ1: CPUのop手札 (4枚)
+    for (let opLocalIndex = 0; opLocalIndex < OP_COUNT; opLocalIndex++) {
+        const cpuOpCardIndex = opLocalIndex + OP_COUNT;
+        const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
+        const opObject = game.ops[opIndexInGameOps];
 
-		const numIterations = opObject.r_param ? NUM_COUNT : 1;
+        const numIterations = opObject.r_param ? NUM_COUNT : 1;
 
-		// ループ2: CPUのnum手札
-		for (let numLocalIndex = 0; numLocalIndex < numIterations; numLocalIndex++) {
-			const cpuNumCardIndex = (opObject.r_param ? numLocalIndex : 0) + NUM_COUNT;
-			const numValue = opObject.r_param ? game.state.num.values[cpuNumCardIndex] : null;
+        // ループ2: CPUのnum手札
+        for (let numLocalIndex = 0; numLocalIndex < numIterations; numLocalIndex++) {
+            const cpuNumCardIndex = (opObject.r_param ? numLocalIndex : 0) + NUM_COUNT;
+            const numValue = opObject.r_param ? game.state.num.values[cpuNumCardIndex] : null;
 
-			// ループ3: 対象フィールド (全12枚)
-			for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
-				const fieldValue = game.state.field.values[targetFieldCardIndex];
+            // ループ3: 対象フィールド (全12枚)
+            for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
+                const fieldValue = game.state.field.values[targetFieldCardIndex];
 
-				// 妥当性チェック
-				if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {
-					continue;
-				}
+                // 値が1のカードは選択対象外にする
+                if (fieldValue === 1) {
+                    continue;
+                }
 
-				const newValue = opObject.calc(fieldValue, numValue);
-				const isPlayerField = targetFieldCardIndex < FIELD_COUNT;
+                // 妥当性チェック
+                if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {
+                    continue;
+                }
 
-				if (isPlayerField) {
-					// プレイヤーの盤面を攻撃する手
-					const scoreIncrease = newValue - fieldValue;
-					if (scoreIncrease > maxPlayerScoreIncrease) {
-						maxPlayerScoreIncrease = scoreIncrease;
-						bestPlayerAttackMove = {
-							op: { index: cpuOpCardIndex, type: opIndexInGameOps },
-							num: { index: cpuNumCardIndex, value: numValue },
-							field: { index: targetFieldCardIndex }
-						};
-					}
-				} else {
-					// CPU自身の盤面を改善する手
-					const distanceReduction = Math.abs(fieldValue - 1) - Math.abs(newValue - 1);
-					if (distanceReduction > maxCpuDistanceReduction) {
-						maxCpuDistanceReduction = distanceReduction;
-						bestCpuDefenseMove = {
-							op: { index: cpuOpCardIndex, type: opIndexInGameOps },
-							num: { index: cpuNumCardIndex, value: numValue },
-							field: { index: targetFieldCardIndex }
-						};
-					}
-				}
-			}
-		}
-	}
+                const newValue = opObject.calc(fieldValue, numValue);
+                const isPlayerField = targetFieldCardIndex < FIELD_COUNT;
 
-	// 変化の大きい方を採用する
-	// bestPlayerAttackMove と bestCpuDefenseMove のどちらか、または両方が null の場合がある
-	if (bestPlayerAttackMove && bestCpuDefenseMove) {
-		if (maxPlayerScoreIncrease > maxCpuDistanceReduction) {
-			return bestPlayerAttackMove;
-		} else {
-			return bestCpuDefenseMove;
-		}
-	} else if (bestPlayerAttackMove) {
-		return bestPlayerAttackMove;
-	} else if (bestCpuDefenseMove) {
-		return bestCpuDefenseMove;
-	} else {
-		// 有効な手が見つからなかった場合
-		console.warn("CPU (Normal/Hard): 有効な手が見つかりませんでした。ランダムな手にフォールバックします。");
-		return moveCPU_Easy();
-	}
+                if (isPlayerField) {
+                    // プレイヤーの盤面を攻撃する手
+                    const scoreIncrease = newValue - fieldValue;
+                    if (scoreIncrease > maxPlayerScoreIncrease) {
+                        maxPlayerScoreIncrease = scoreIncrease;
+                        bestPlayerAttackMove = {
+                            op: { index: cpuOpCardIndex, type: opIndexInGameOps },
+                            num: { index: cpuNumCardIndex, value: numValue },
+                            field: { index: targetFieldCardIndex }
+                        };
+                    }
+                } else {
+                    // CPU自身の盤面を改善する手
+                    const distanceReduction = Math.abs(fieldValue - 1) - Math.abs(newValue - 1);
+                    if (distanceReduction > maxCpuDistanceReduction) {
+                        maxCpuDistanceReduction = distanceReduction;
+                        bestCpuDefenseMove = {
+                            op: { index: cpuOpCardIndex, type: opIndexInGameOps },
+                            num: { index: cpuNumCardIndex, value: numValue },
+                            field: { index: targetFieldCardIndex }
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    // 変化の大きい方を採用する
+    // bestPlayerAttackMove と bestCpuDefenseMove のどちらか、または両方が null の場合がある
+    if (bestPlayerAttackMove && bestCpuDefenseMove) {
+        if (maxPlayerScoreIncrease > maxCpuDistanceReduction) {
+            return bestPlayerAttackMove;
+        } else {
+            return bestCpuDefenseMove;
+        }
+    } else if (bestPlayerAttackMove) {
+        return bestPlayerAttackMove;
+    } else if (bestCpuDefenseMove) {
+        return bestCpuDefenseMove;
+    } else {
+        // 有効な手が見つからなかった場合
+        console.warn("CPU (Normal/Hard): 有効な手が見つかりませんでした。ランダムな手にフォールバックします。");
+        return moveCPU_Easy();
+    }
 }
 
 
 // CPUの行動を決定するメイン関数 (レベルに応じて分岐)
 function moveCPU() {
-	// グローバル変数 `level` を参照
-	if (level === 'easy') {
-		return moveCPU_Easy();
-	} else {
-		return moveCPU_NormalHard();
-	}
+    // グローバル変数 `level` を参照
+    if (level === 'easy') {
+        return moveCPU_Easy();
+    } else {
+        return moveCPU_NormalHard();
+    }
 }
 
 
@@ -487,7 +498,6 @@ function setupDesign(rule) {
 			break;
 		case 'battle':
 			document.documentElement.style.fontSize = 'min(0.6vh, 0.36vw)';
-			cards.apply[0].classList.add('battle');
 			break;
 	}
 }
@@ -519,7 +529,7 @@ async function startAnimation() {
 			const index = game.rule === 'battle' ? i % FIELD_COUNT : i;
 			return animate(ele, [
 				{
-					translate: `${(2.5 - index) * 5}rem -25rem 0`,
+					translate: `${(2.5 - index) * 10}rem -20rem 0`,
 					opacity: 0
 				},
 				{
@@ -584,9 +594,11 @@ async function applyAnimation(old, renew, index, user = true) {
 	// カードを中心に
 	await Promise.all(
 		keys.map((key, i) => {
+			// HACK: applyボタンだけtransformYの補正が入っているため、その分を補正する
+			const offsetY = key === 'apply' ? ele.apply.getBoundingClientRect().height / 4 : 0;
 			return animate(ele[key], {
-				translate: `calc(50vw - ${center[key].x}px + ${arrange[key]}rem) calc(${areaCenterY}px - ${center[key].y}px) 0`,
-				scale: (key === 'field' ? 1 : (key === 'apply' ? 4 / 3 : 2))
+				translate: `calc(50vw - ${center[key].x}px + ${arrange[key]}rem) calc(${areaCenterY}px - ${center[key].y}px + ${offsetY}px) 0`,
+				scale: (key === 'field' ? 2 / 3 : 1) * 1.5
 			}, 500);
 		})
 	);
@@ -594,14 +606,12 @@ async function applyAnimation(old, renew, index, user = true) {
 	await new Promise((resolve) => setTimeout(resolve, 200));
 
 	// 両端のカード入れ替え
-	if (index.field < FIELD_COUNT) ele.dummy.classList.remove('enemy');
-	else ele.dummy.classList.add('enemy');
 	Object.assign(ele.dummy.style, {
 		display: 'flex',
-		left: `calc(50vw + ${arrange.field}rem)`,
+		left: `calc(50vw + ${arrange.field}rem) `,
 		top: `50vh`,
 		translate: '-50% -50% 0',
-		scale: 1
+		scale: 1.5
 	});
 	ele.dummy.textContent = ele.field.textContent;
 
@@ -620,7 +630,7 @@ async function applyAnimation(old, renew, index, user = true) {
 		},
 	], 500);
 
-	await new Promise((res) => setTimeout(res, 1500));
+	await new Promise((res) => setTimeout(res, 1000));
 
 	if (renew.field !== 1) ele.field.classList.remove('display');
 	// 場のカードを戻す
@@ -678,6 +688,8 @@ async function applyAnimation(old, renew, index, user = true) {
 	['dummy', ...rest].forEach((key) => {
 		ele[key].removeAttribute('style');
 	});
+	// HACK: applyボタンのtransformを再適用
+	ele.apply.style.transform = 'translateY(-50%)';
 
 	if (game.cleared) {
 		const modal = document.getElementById('clear');
@@ -694,17 +706,15 @@ async function applyAnimation(old, renew, index, user = true) {
 	if (game.rule === 'battle' && user) {
 		document.body.classList.remove('player-turn');
 		document.body.classList.add('cpu-turn');
-		cards.apply[0].classList.add('enemy');
 		await applyCPUAnimation();
 	}
-	cards.apply[0].classList.remove('enemy');
 }
 
 async function applyCPUAnimation() {
-	// moveCPUがレベルに応じた最適な手を返す
-	const move = moveCPU(game);
+    // moveCPUがレベルに応じた最適な手を返す
+	const move = moveCPU(game); 
 	const field_value = game.state.field.values[move.field.index], op = game.ops[move.op.type];
-
+	
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	game.click('field', move.field.index);
 	await new Promise((resolve) => setTimeout(resolve, 800));
@@ -717,29 +727,29 @@ async function applyCPUAnimation() {
 		await new Promise((resolve) => setTimeout(resolve, 800));
 	}
 
-	// *** ここでCPUの手札を補充するロジックが必要 ***
-	// プレイヤーの apply() メソッドを参考に、CPU側の手札を .make() する
-	// (Stateクラスはchosen(選択中)のカードをmakeする仕様なので、
-	//  CPUが使ったカードのインデックスを一時的にchosenに設定する必要がある)
+    // *** ここでCPUの手札を補充するロジックが必要 ***
+    // プレイヤーの apply() メソッドを参考に、CPU側の手札を .make() する
+    // (Stateクラスはchosen(選択中)のカードをmakeする仕様なので、
+    //  CPUが使ったカードのインデックスを一時的にchosenに設定する必要がある)
 
-	// 1. 選択状態を一時的にCPUが使ったカードに設定
-	game.state.field.chosen = move.field.index;
-	game.state.op.chosen = move.op.index;
-	if (op.r_param) {
-		game.state.num.chosen = move.num.index;
-	}
+    // 1. 選択状態を一時的にCPUが使ったカードに設定
+    game.state.field.chosen = move.field.index;
+    game.state.op.chosen = move.op.index;
+    if (op.r_param) {
+        game.state.num.chosen = move.num.index;
+    }
 
-	// 2. 計算結果をフィールドに反映 (make)
-	const newValue = op.calc(field_value, move.num.value);
+    // 2. 計算結果をフィールドに反映 (make)
+    const newValue = op.calc(field_value, move.num.value);
 	game.state.field.make(newValue);
+    
+    // 3. CPUの手札を補充 (make)
+    game.state.op.make(); // 新しいopを生成
+    if (op.r_param) {
+        game.state.num.make(); // 新しいnumを生成
+    }
 
-	// 3. CPUの手札を補充 (make)
-	game.state.op.make(); // 新しいopを生成
-	if (op.r_param) {
-		game.state.num.make(); // 新しいnumを生成
-	}
-
-	// 4. 選択状態をリセット (重要)
+    // 4. 選択状態をリセット (重要)
 	game.state.field.focus(-1);
 	game.state.op.focus(-1);
 	game.state.num.focus(-1);
@@ -748,11 +758,11 @@ async function applyCPUAnimation() {
 	await applyAnimation(
 		{ field: field_value, op: op, num: move.num.value },
 		// renewの値は、State.oninit が参照できるように、make() で生成された後の値を使う
-		{
-			field: newValue,
-			op: game.state.op.values[move.op.index], // 新しく生成されたop
-			num: op.r_param ? game.state.num.values[move.num.index] : null // 新しく生成されたnum
-		},
+        { 
+            field: newValue, 
+            op: game.state.op.values[move.op.index], // 新しく生成されたop
+            num: op.r_param ? game.state.num.values[move.num.index] : null // 新しく生成されたnum
+        },
 		{ field: move.field.index, op: move.op.index, num: move.num.index, apply: 0 },
 		false
 	);
@@ -764,13 +774,13 @@ function displayOperator(index, name, hide = true) {
 	ele.textContent = '';
 	switch (name) {
 		case 'pop':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 2rem">Popcount</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.8rem">Popcount</span>');
 			break;
 		case 'd':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 2rem">の約数の数</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.6rem">の約数の数</span>');
 			break;
 		case 'gcd':
-			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.7rem">の最大公約数</span>');
+			ele.insertAdjacentHTML('afterbegin', '<span style="font-size: 1.4rem">の最大公約数</span>');
 			break;
 		default:
 			ele.textContent = {
@@ -831,17 +841,17 @@ function init() {
 async function start(level, rule) {
 	setupDesign(rule);
 
-	try {
-		const response = await fetch('/q-table.json');
-		if (response.ok) {
-			qTable = await response.json();
-			console.log('Q-table loaded successfully.');
-		} else {
-			console.error('Failed to load Q-table. CPU will use random moves.');
-		}
-	} catch (error) {
-		console.error('Error fetching Q-table:', error);
-	}
+    try {
+        const response = await fetch('/q-table.json');
+        if (response.ok) {
+            qTable = await response.json();
+            console.log('Q-table loaded successfully.');
+        } else {
+            console.error('Failed to load Q-table. CPU will use random moves.');
+        }
+    } catch (error) {
+        console.error('Error fetching Q-table:', error);
+    }
 
 	for (const key in cards) {
 		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
