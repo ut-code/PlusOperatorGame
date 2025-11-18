@@ -4,7 +4,7 @@
 }
 
 :root {
-    font-size: min(1vh, 0.6vw);
+    font-size: min(0.7vh, 0.42vw);
 }
 
 body {
@@ -67,7 +67,7 @@ body {
     box-sizing: border-box;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     width: 70vw;
-    height: 27vh;
+    height: 40rem;
     display: grid;
     grid-template-columns: auto repeat(6, auto);
     justify-content: center;
@@ -78,7 +78,7 @@ body {
 #hand,
 #enemy_hand {
     width: 85vw;
-    height: 15vh;
+    height: 25rem;
     display: grid;
     grid-template-columns: 37vw 37vw;
     justify-content: center;
@@ -89,7 +89,7 @@ body {
 #hand>div,
 #enemy_hand>div {
     width: 100%;
-    height: 15vh;
+    height: 25rem;
     background-color: #ffffff;
     border-radius: 3rem;
     box-sizing: border-box;
@@ -108,7 +108,7 @@ body {
     position: absolute;
     top: 1rem;
     left: 2rem;
-    font-size: 2.5rem;
+    font-size: 4rem;
     font-weight: 700;
     color: #555;
     margin: 0;
@@ -122,7 +122,7 @@ body {
 
 #field>h3,
 #enemy_field>h3 {
-    font-size: 2.5rem;
+    font-size: 4rem;
     font-weight: 700;
     color: #555;
     justify-self: auto;
@@ -131,13 +131,15 @@ body {
 }
 
 .card {
-    background-color: #f8f8f8;
-    border: #158b68 0.5rem solid;
-    border-radius: 1rem;
-    box-sizing: border-box;
-    width: 10rem;
-    height: 12rem;
+    width: 12rem;
+    aspect-ratio: 3 / 4;
     font-size: 4rem;
+    border: #00c78a 0.2rem solid;
+    border-radius: 1rem;
+
+    background-color: #f8f8f8;
+    box-sizing: border-box;
+
     display: flex;
     justify-content: center;
     align-items: center;
@@ -145,74 +147,59 @@ body {
     transition: 0.15s scale ease-out, 0.15s border-color linear, 0.15s background-color linear, 0.15s transform ease-out, 0.15s box-shadow ease-out;
     will-change: translate, scale, opacity, border-color, transform, box-shadow;
     backface-visibility: visible;
+
+    #field &,
+    #enemy_field &,
+    &#dummy {
+        width: 24rem;
+        font-size: 8rem;
+        border-radius: 2rem;
+        border-width: 0.4rem;
+    }
+
+    #enemy_field &,
+    #enemy_hand &,
+    &.enemy {
+        border-color: #ef5350;
+    }
+
+    &.chosen,
+    &.display {
+        color: #fff;
+        scale: 1.1;
+        background-color: #00c78a;
+
+        #enemy_field &,
+        #enemy_hand &,
+        &.enemy {
+            background-color: #ef5350;
+        }
+    }
+
+    &:not(.invalid):not(.chosen):not(#enemy_hand .card):not(#enemy_field .card):not(.is-animating .card):hover {
+        scale: 1.05;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.2);
+    }
+
+    &.invalid {
+        background-color: #999;
+        cursor: not-allowed;
+        border-color: #777;
+    }
+
+    .is-animating & {
+        pointer-events: none;
+    }
 }
 
-#field .card,
-#enemy_field .card {
-    width: 30rem;
-    height: 80%;
-    border-width: 0.75rem;
+#apply {
+    width: 18rem;
     border-radius: 1.5rem;
-    font-size: 6rem;
-}
 
-#hand .card,
-#enemy_hand .card {
-    width: auto;
-    height: 90%;
-    aspect-ratio: 15 / 18;
-    font-size: 4rem;
-}
-
-#field .card.chosen,
-#hand .card.chosen {
-    border-color: #00c78a;
-    background-color: #00c78a;
-    color: #fff;
-    scale: 1.2;
-}
-
-#enemy_field .card.chosen,
-#enemy_hand .card.chosen {
-    border-color: #ef5350;
-    background-color: #ef5350;
-    color: #fff;
-    scale: 1.2;
-}
-
-.card.display {
-    border-color: #99f;
-    scale: 1.2;
-}
-
-.card:not(.invalid):not(#enemy_hand .card):not(#enemy_field .card):hover {
-    transform: translateY(-0.5rem);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-}
-
-.card:not(.invalid):not(.chosen):not(#enemy_hand .card):not(#enemy_field .card):hover {
-    border-color: #00c78a;
-}
-
-#enemy_hand .card,
-#enemy_field .card {
-    border-color: #b71c1c;
-}
-
-#enemy_field .card:not(.invalid):not(.chosen):hover {
-    border-color: #ef5350;
-    transform: translateY(-0.5rem);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-}
-
-.card.invalid {
-    background-color: #999;
-    cursor: not-allowed;
-    border-color: #777;
-}
-
-.is-animating .card {
-    pointer-events: none;
+    &.battle {
+        position: absolute;
+        left: 90vw;
+    }
 }
 
 #dummy {
@@ -290,27 +277,14 @@ body {
     transform: scale(1.02);
 }
 
-#apply {
-    position: absolute;
-    top: 50%;
-    right: 7.5%;
-    transform: translate(50%, -50%);
-    height: 13.5vh; /* Hand card height is 90% of its container (15vh) */
-    width: auto;
-    aspect-ratio: 15 / 18; /* Same aspect ratio as other cards */
-}
-
-#apply:hover {
-    transform: translate(50%, -50%) !important;
-    box-shadow: none;
-}
-
 body.player-turn {
-    background-color: #e8f5e9; /* light green */
+    background-color: #e8f5e9;
+    /* light green */
     transition: background-color 0.5s ease;
 }
 
 body.cpu-turn {
-    background-color: #ffebee; /* light red */
+    background-color: #ffebee;
+    /* light red */
     transition: background-color 0.5s ease;
 }
