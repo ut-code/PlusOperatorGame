@@ -1,4 +1,4 @@
-import express from "express";
+import express, { response } from "express";
 import path from 'path'; 
 import { fileURLToPath } from 'url'; 
 
@@ -19,6 +19,10 @@ app.get("/", (request, response) => {
 
 app.get("/play", (request, response) => {
   response.sendFile(path.join(__dirname, 'play', 'play.html'));
+});
+
+app.get("/health", (request, response) =>{
+  response.send("200 OK");
 });
 
 app.listen(PORT, () => {
