@@ -191,26 +191,7 @@ class Game {
 
 		this.opgen = new WeightRandom(getOpPriority(level));
 
-		const easyOps = ['add', 'sub', 'mul', 'div'];
-		const normalOps = ['rem', 'root', 'd', 'gcd'];
-		const hardOps = ['and', 'or', 'xor', 'pop'];
-
-		let enabledOps = [];
-		switch (level) {
-			case 'easy':
-				enabledOps = easyOps;
-				break;
-			case 'normal':
-				enabledOps = [...easyOps, ...normalOps];
-				break;
-			case 'hard':
-				enabledOps = [...easyOps, ...normalOps, ...hardOps];
-				break;
-			default:
-				enabledOps = easyOps;
-		}
-
-		this.ops = Op.list.filter(op => enabledOps.includes(op.name));
+		this.ops = Op.list;
 
 		this.state = {
 			field: new State('field', FIELD_COUNT, () => Math.floor(Math.random() * 18 + 2), null, rule === 'battle'),
