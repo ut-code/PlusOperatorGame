@@ -200,6 +200,11 @@ body {
         position: absolute;
         left: 90vw;
     }
+
+    &:hover {
+        transform: translate(50%, -50%) !important;
+        box-shadow: none;
+    }
 }
 
 #dummy {
@@ -287,4 +292,94 @@ body.cpu-turn {
     background-color: #ffebee;
     /* light red */
     transition: background-color 0.5s ease;
+}
+
+/* === Help Button and Popup Styles === */
+
+#help-button {
+    position: absolute;
+    top: 50%;
+    left: 7.5%;
+    transform: translate(-50%, -50%);
+    width: 10rem;
+    height: 10rem;
+    font-size: 5rem;
+    border-radius: 50%;
+    border-color: #33f;
+    background-color: #e0e0ff;
+    color: #333;
+    z-index: 5;
+}
+
+#help-button:hover {
+    background-color: #ddf;
+    transform: translate(-50%, -50%) scale(1.05) !important;
+    box-shadow: none;
+}
+
+#help-popup {
+    display: none; /* Initially hidden */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+#help-popup.show {
+    display: flex; /* Show with this class */
+}
+
+#help-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 3rem 4rem;
+    border: 1px solid #888;
+    border-radius: 2rem;
+    width: 80%;
+    max-width: 80rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+    font-size: 2.5rem;
+    color: #333;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+
+#help-content h2 {
+    font-size: 4rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    color: #158b68;
+}
+
+#help-content p {
+    line-height: 1.6;
+}
+
+#close-help {
+    color: #aaa;
+    position: absolute;
+    top: 1.5rem;
+    right: 2.5rem;
+    font-size: 5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+#close-help:hover,
+#close-help:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
 }

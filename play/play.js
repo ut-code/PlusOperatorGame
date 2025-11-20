@@ -320,13 +320,12 @@ function moveCPU_Easy() {
 
     let targetFieldCardIndex;
     if (validTargets.length > 0) {
-        // 有効なターゲットからランダムに1つ選ぶ
+        // 有効なターゲットの中からランダムに選択
         targetFieldCardIndex = validTargets[Math.floor(Math.random() * validTargets.length)];
     } else {
-        // 有効なターゲットがない場合（全カードが1など、通常はゲーム終了後）、
-        // クラッシュを避けるために元のランダムな選択ロジックにフォールバックする
-        console.warn("CPU (Easy): 有効なターゲットが見つかりませんでした。ランダムな手にフォールバックします。");
-        targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT * 2);
+        // 有効なターゲットがない場合（ゲーム終了時など）は、ダミーの動きとして最初のカードを選択
+        // この手は通常実行されない
+        targetFieldCardIndex = 0; 
     }
 
     // 2. CPUが使用するリソース（手札）をランダムに決定
@@ -691,16 +690,31 @@ async function applyAnimation(old, renew, index, user = true) {
 	// HACK: applyボタンのtransformを再適用
 	ele.apply.style.transform = 'translateY(-50%)';
 
-	if (game.cleared) {
+	const handleGameEnd = (isWin) => {
 		const modal = document.getElementById('clear');
+		const head = document.getElementById('clear-head');
 		const movesDisplay = document.getElementById('clear-moves');
-		movesDisplay.textContent = `手数：${game.moves} 回`;
+
+		if (game.rule === 'battle') {
+			head.textContent = isWin ? 'You win' : 'You lose';
+			movesDisplay.textContent = isWin ? `手数：${game.moves} 回` : '';
+		} else { // solo
+			head.textContent = 'Clear!!';
+			movesDisplay.textContent = `手数：${game.moves} 回`;
+		}
+
 		modal.style.opacity = 1;
 		modal.style.scale = 1;
+	};
+
+	if (game.cleared) {
+		handleGameEnd(true);
 		return;
 	}
 
 	if (game.failed) {
+		handleGameEnd(false);
+		return;
 	}
 
 	if (game.rule === 'battle' && user) {
@@ -835,23 +849,33 @@ function init() {
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
 	document.getElementById('retry').addEventListener('click', () => start(level, rule));
-	document.getElementById('return').addEventListener('click', () => location.replace('../home/home.html'));
+	document.getElementById('return').addEventListener('click', () => location.replace('../'));
+
+    const helpButton = document.getElementById('help-button');
+    const helpPopup = document.getElementById('help-popup');
+    const closeHelpButton = document.getElementById('close-help');
+
+    if (helpButton && helpPopup && closeHelpButton) {
+        helpButton.addEventListener('click', () => {
+            helpPopup.classList.add('show');
+        });
+
+        closeHelpButton.addEventListener('click', () => {
+            helpPopup.classList.remove('show');
+        });
+
+        // 追加: ポップアップの外側をクリックしたら閉じる
+        window.addEventListener('click', (event) => {
+            if (event.target === helpPopup) {
+                helpPopup.classList.remove('show');
+            }
+        });
+    }
 }
 
 async function start(level, rule) {
 	setupDesign(rule);
 
-    try {
-        const response = await fetch('/q-table.json');
-        if (response.ok) {
-            qTable = await response.json();
-            console.log('Q-table loaded successfully.');
-        } else {
-            console.error('Failed to load Q-table. CPU will use random moves.');
-        }
-    } catch (error) {
-        console.error('Error fetching Q-table:', error);
-    }
 
 	for (const key in cards) {
 		if (key === 'dummy') continue; // 'dummy'キーの場合はスキップする
@@ -860,7 +884,7 @@ async function start(level, rule) {
 	}
 	document.getElementById('clear').removeAttribute('style');
 
-	document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)}`;
+    document.getElementById('title').textContent = `Level ${level.charAt(0).toUpperCase() + level.slice(1)}`;
 
 	game = new Game(level, rule);
 
