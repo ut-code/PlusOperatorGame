@@ -16,7 +16,7 @@ export class WeakCpuAgent {
             const action = actions[i];
             // Check if the field, op, and num cards are valid (not null or invalid)
             // This is a simplified check. A more robust check would involve Op.isFValid and Op.isPValid
-            if (state.field.valid[action.field] && state.op.valid[action.op] && state.num.valid[action.num]) {
+            if (state.field.valid[action.field] && state.op.valid[action.op] && state.num.valid[action.num] && state.num.values[action.num] !== 1 && state.field.values[action.field] !== 1) {
                 validActions.push(i);
             }
         }
