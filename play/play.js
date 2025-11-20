@@ -453,6 +453,15 @@ function moveCPU() {
     }
 }
 
+// ターン開始時に呼ぶ関数（既存の `game.accept()` などの後に追加）
+function updateApplyButtonClass() {
+    const applyButton = document.getElementById('apply');
+    if (level === 'solo') {
+        applyButton.classList.remove('battle');
+    } else {
+        applyButton.classList.add('battle');
+    }
+}
 
 const cards = {
 	field: [...document.querySelectorAll('#field>.card'), ...rule === 'battle' ? document.querySelectorAll('#enemy_field>.card') : []],
@@ -899,6 +908,9 @@ async function start(level, rule) {
 	await startAnimation();
 	game.accept();
 }
+
+// ゲーム開始時（start 関数内など）に呼ぶ
+updateApplyButtonClass();
 
 var game;
 init();
