@@ -395,17 +395,13 @@ body.cpu-turn {
     z-index: 5;
     transition: 0.15s scale ease-out, 0.15s background-color linear;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    line-height: 1;
 
-    &::after {
-        content: '遊び方↓';
-        display: block;
-        position: absolute;
-        text-align: center;
-        width: 200%;
-        font-size: 4rem;
-        top: -8rem;
+    div {
+        font-size: 2rem;
     }
 }
 
@@ -431,11 +427,11 @@ body.cpu-turn {
 #help-popup.show {
     display: flex;
 
-    &.diff span.easy {
+    &.diff .easy {
         display: none;
     }
 
-    &:not(.diff) span.diff {
+    &:not(.diff) .diff {
         display: none;
     }
 }
