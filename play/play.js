@@ -356,12 +356,16 @@ function moveCPU_NormalHard() {
 			const numValue = opObject.r_param ? game.state.num.values[cpuNumCardIndex] : null;
 
 			// ループ3: 対象フィールド (全12枚)
-			for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
-				const fieldValue = game.state.field.values[targetFieldCardIndex];
-
-				// 妥当性チェック
-				if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {
-					continue;
+			            for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
+			                const fieldValue = game.state.field.values[targetFieldCardIndex];
+			
+			                // 値が1のカードは選択対象外にする
+			                if (fieldValue === 1) {
+			                    continue;
+			                }
+			
+			                // 妥当性チェック
+			                if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {					continue;
 				}
 
 				const newValue = opObject.calc(fieldValue, numValue);
@@ -806,9 +810,29 @@ function init() {
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
 	document.getElementById('retry').addEventListener('click', () => start(level, rule));
-	document.getElementById('return').addEventListener('click', () => location.replace('../home/home.html'));
-}
+	document.getElementById('return').addEventListener('click', () => location.replace('../'));
 
+    // Help button event listeners
+    const helpButton = document.getElementById('help-button');
+    const helpPopup = document.getElementById('help-popup');
+    const closeHelp = document.getElementById('close-help');
+
+    if (helpButton && helpPopup && closeHelp) {
+        helpButton.addEventListener('click', () => {
+            helpPopup.classList.add('show');
+        });
+
+        closeHelp.addEventListener('click', () => {
+            helpPopup.classList.remove('show');
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === helpPopup) {
+                helpPopup.classList.remove('show');
+            }
+        });
+    }
+}
 async function start(level, rule) {
 	setupDesign(rule);
 

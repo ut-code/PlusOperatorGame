@@ -20,6 +20,9 @@ app.get("/", (request, response) => {
 app.get("/play", (request, response) => {
   response.sendFile(path.join(__dirname, 'play', 'play.html'));
 });
+app.get("/health", (request, response) => {
+  response.send("OK");
+});
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
