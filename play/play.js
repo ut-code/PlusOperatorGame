@@ -2,7 +2,7 @@ const params = new URLSearchParams(window.location.search);
 const level = params.get('level') || 'easy';
 const rule = params.get('rule') || 'solo';
 
-const FIELD_COUNT = 6, OP_COUNT = 4, NUM_COUNT = 4;
+const FIELD_COUNT = rule === 'solo' ? 6 : 4, OP_COUNT = 4, NUM_COUNT = 4;
 
 
 // 演算選択用の重み付き乱数
@@ -356,16 +356,17 @@ function moveCPU_NormalHard() {
 			const numValue = opObject.r_param ? game.state.num.values[cpuNumCardIndex] : null;
 
 			// ループ3: 対象フィールド (全12枚)
-			            for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
-			                const fieldValue = game.state.field.values[targetFieldCardIndex];
-			
-			                // 値が1のカードは選択対象外にする
-			                if (fieldValue === 1) {
-			                    continue;
-			                }
-			
-			                // 妥当性チェック
-			                if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {					continue;
+			for (let targetFieldCardIndex = 0; targetFieldCardIndex < FIELD_COUNT * 2; targetFieldCardIndex++) {
+				const fieldValue = game.state.field.values[targetFieldCardIndex];
+
+				// 値が1のカードは選択対象外にする
+				if (fieldValue === 1) {
+					continue;
+				}
+
+				// 妥当性チェック
+				if (!opObject.isFValid(fieldValue) || (opObject.r_param && !opObject.isPValid(numValue))) {
+					continue;
 				}
 
 				const newValue = opObject.calc(fieldValue, numValue);
@@ -436,6 +437,14 @@ const cards = {
 	apply: document.querySelectorAll('#apply'),
 	dummy: document.querySelector('#dummy')
 };
+
+// HACK: CPUモードで場の数を減らす
+{
+	cards.field.forEach((ele, index) => {
+		if (index % 6 >= FIELD_COUNT) ele.style.display = 'none';
+	})
+	cards.field = cards.field.filter((_, index) => index % 6 < FIELD_COUNT);
+}
 
 for (const key in cards) {
 	if (key === 'dummy');
@@ -664,16 +673,17 @@ async function applyAnimation(old, renew, index, user = true) {
 		ele[key].removeAttribute('style');
 	});
 
-	if (game.cleared) {
+	if (game.cleared || game.failed) {
 		const modal = document.getElementById('clear');
+		const clearDisplay = document.getElementById('clear-head');
 		const movesDisplay = document.getElementById('clear-moves');
+		const curtain = document.getElementById('curtain');
+		clearDisplay.textContent = game.cleared ? (game.rule === 'battle' ? 'Win!' : 'Clear!') : 'Lose...';
 		movesDisplay.textContent = `手数：${game.moves} 回`;
 		modal.style.opacity = 1;
 		modal.style.scale = 1;
+		curtain.classList.add('display');
 		return;
-	}
-
-	if (game.failed) {
 	}
 
 	if (game.rule === 'battle' && user) {
@@ -812,26 +822,26 @@ function init() {
 	document.getElementById('retry').addEventListener('click', () => start(level, rule));
 	document.getElementById('return').addEventListener('click', () => location.replace('../'));
 
-    // Help button event listeners
-    const helpButton = document.getElementById('help-button');
-    const helpPopup = document.getElementById('help-popup');
-    const closeHelp = document.getElementById('close-help');
+	// Help button event listeners
+	const helpButton = document.getElementById('help-button');
+	const helpPopup = document.getElementById('help-popup');
+	const closeHelp = document.getElementById('close-help');
 
-    if (helpButton && helpPopup && closeHelp) {
-        helpButton.addEventListener('click', () => {
-            helpPopup.classList.add('show');
-        });
+	if (helpButton && helpPopup && closeHelp) {
+		helpButton.addEventListener('click', () => {
+			helpPopup.classList.add('show');
+		});
 
-        closeHelp.addEventListener('click', () => {
-            helpPopup.classList.remove('show');
-        });
+		closeHelp.addEventListener('click', () => {
+			helpPopup.classList.remove('show');
+		});
 
-        window.addEventListener('click', (event) => {
-            if (event.target === helpPopup) {
-                helpPopup.classList.remove('show');
-            }
-        });
-    }
+		window.addEventListener('click', (event) => {
+			if (event.target === helpPopup) {
+				helpPopup.classList.remove('show');
+			}
+		});
+	}
 }
 async function start(level, rule) {
 	setupDesign(rule);
@@ -864,7 +874,7 @@ async function start(level, rule) {
 
 		await applyAnimation(...args);
 
-		if (!game.cleared) game.accept();
+		if (!game.cleared && !game.failed) game.accept();
 	};
 
 	await startAnimation();
