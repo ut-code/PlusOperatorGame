@@ -397,6 +397,16 @@ body.cpu-turn {
     display: flex;
     justify-content: center;
     align-items: center;
+
+    &::after {
+        content: '遊び方↓';
+        display: block;
+        position: absolute;
+        text-align: center;
+        width: 200%;
+        font-size: 4rem;
+        top: -8rem;
+    }
 }
 
 #help-button:hover {
@@ -420,6 +430,14 @@ body.cpu-turn {
 
 #help-popup.show {
     display: flex;
+
+    &.diff span.easy {
+        display: none;
+    }
+
+    &:not(.diff) span.diff {
+        display: none;
+    }
 }
 
 #help-content {
@@ -429,7 +447,7 @@ body.cpu-turn {
     border: 1px solid #888;
     border-radius: 2rem;
     width: 90%;
-    max-width: 120rem;
+    max-width: 130rem;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     position: relative;
     font-size: 3rem;
@@ -460,6 +478,12 @@ body.cpu-turn {
 
 #help-content p {
     line-height: 1.6;
+}
+
+#dscr-change {
+    border: #666 solid 0.1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
 }
 
 #close-help {

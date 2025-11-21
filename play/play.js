@@ -826,6 +826,7 @@ function init() {
 	const helpButton = document.getElementById('help-button');
 	const helpPopup = document.getElementById('help-popup');
 	const closeHelp = document.getElementById('close-help');
+	const dscrChange = document.getElementById('dscr-change');
 
 	if (helpButton && helpPopup && closeHelp) {
 		helpButton.addEventListener('click', () => {
@@ -834,6 +835,10 @@ function init() {
 
 		closeHelp.addEventListener('click', () => {
 			helpPopup.classList.remove('show');
+		});
+
+		dscrChange.addEventListener('click', () => {
+			helpPopup.classList.toggle('diff');
 		});
 
 		window.addEventListener('click', (event) => {
