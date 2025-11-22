@@ -300,6 +300,15 @@ body {
     box-sizing: border-box;
     border: #666 solid 0.2rem;
     z-index: 20;
+
+    &.show {
+        opacity: 1;
+        scale: 1;
+
+        +#curtain {
+            display: block;
+        }
+    }
 }
 
 #clear-head {
@@ -321,15 +330,12 @@ body {
     height: 100vh;
     background-color: #fff6;
     z-index: 15;
-
-    &.display {
-        display: block;
-    }
 }
 
 #buttons {
     display: grid;
     grid-auto-flow: column;
+    grid-template-columns: 1fr 1fr;
     place-items: center;
     width: 100%;
     gap: 2rem;
@@ -339,7 +345,7 @@ body {
     text-align: center;
     font-size: 4rem;
     border: 0.5rem solid;
-    border-radius: 2rem;
+    border-radius: 9999rem;
     width: 80%;
     cursor: pointer;
     padding: 1rem;
@@ -353,7 +359,8 @@ body {
 }
 
 #buttons #retry:hover {
-    background-color: #fdd;
+    background-color: #f33;
+    color: #fff;
     transform: scale(1.02);
 }
 
@@ -363,7 +370,8 @@ body {
 }
 
 #buttons #return:hover {
-    background-color: #ddf;
+    background-color: #33f;
+    color: #fff;
     transform: scale(1.02);
 }
 
@@ -389,7 +397,7 @@ body.cpu-turn {
     font-size: 5rem;
     border-radius: 50%;
     border: none;
-    background-color: #e0e0ff;
+    background-color: #ccf;
     color: #333;
     cursor: pointer;
     z-index: 5;
@@ -406,7 +414,7 @@ body.cpu-turn {
 }
 
 #help-button:hover {
-    background-color: #ddf;
+    background-color: #bbf;
     transform: translate(-50%, -50%) scale(1.05);
 }
 
@@ -443,7 +451,7 @@ body.cpu-turn {
     border: 1px solid #888;
     border-radius: 2rem;
     width: 90%;
-    max-width: 130rem;
+    max-width: fit-content;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     position: relative;
     font-size: 3rem;
@@ -477,9 +485,15 @@ body.cpu-turn {
 }
 
 #dscr-change {
-    border: #666 solid 0.1rem;
-    padding: 1rem;
-    border-radius: 0.5rem;
+    border: #0c0 solid 0.1rem;
+    background-color: #cfc;
+    padding: 2rem;
+    border-radius: 9999rem;
+
+    &:hover {
+        background-color: #0c0;
+        color: #fff;
+    }
 }
 
 #close-help {
