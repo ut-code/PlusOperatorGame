@@ -679,12 +679,9 @@ async function applyAnimation(old, renew, index, user = true) {
 		const modal = document.getElementById('clear');
 		const clearDisplay = document.getElementById('clear-head');
 		const movesDisplay = document.getElementById('clear-moves');
-		const curtain = document.getElementById('curtain');
 		clearDisplay.textContent = game.cleared ? (game.rule === 'battle' ? 'Win!' : 'Clear!') : 'Lose...';
 		movesDisplay.textContent = `手数：${game.moves} 回`;
-		modal.style.opacity = 1;
-		modal.style.scale = 1;
-		curtain.classList.add('display');
+		modal.classList.add('show');
 		return;
 	}
 
@@ -821,7 +818,11 @@ function init() {
 	State.onenabled = (key, index) => cards[key][index].classList.remove('invalid');
 	State.ondisabled = (key, index) => cards[key][index].classList.add('invalid');
 
-	document.getElementById('retry').addEventListener('click', () => start(level, rule));
+	document.getElementById('retry').addEventListener('click', () => {
+		const modal = document.getElementById('clear');
+		modal.classList.remove('show');
+		start(level, rule)
+	});
 	document.getElementById('return').addEventListener('click', () => location.replace('../'));
 
 	// Help button event listeners
