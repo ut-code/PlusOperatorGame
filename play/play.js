@@ -291,46 +291,48 @@ var game;
 
 // 対戦相手の手を設定 (Easy AI: ランダム)
 function moveCPU_Easy() {
-	// 1. 攻撃対象のフィールドをランダムに決定
-	// 50%の確率で相手（プレイヤー）のフィールド、50%の確率で自分（CPU）のフィールド
-	const attackPlayer = Math.random() < 0.5;
+	// CPUの手の候補
+	const valid_list = [];
 
-	let targetFieldCardIndex;
-	if (attackPlayer) {
-		// プレイヤーのフィールド (インデックス 0 から FIELD_COUNT - 1)
-		targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT);
-	} else {
-		// CPU自身のフィールド (インデックス FIELD_COUNT から FIELD_COUNT * 2 - 1)
-		targetFieldCardIndex = Math.floor(Math.random() * FIELD_COUNT) + FIELD_COUNT;
+	for (let opIndex = OP_COUNT; opIndex < OP_COUNT * 2; opIndex++) {
+		const opsIndex = game.state.op.values[opIndex],
+			op = game.ops[opsIndex];
+
+		for (let fieldIndex = 0; fieldIndex < FIELD_COUNT * 2; fieldIndex++) {
+			const field = game.state.field.values[fieldIndex];
+			if (field === 1) continue;
+			if (!op.isFValid(field)) continue;
+
+			if (op.r_param) {
+				for (let numIndex = NUM_COUNT; numIndex < NUM_COUNT * 2; numIndex++) {
+					num = game.state.num.values[numIndex];
+					if (!op.isPValid(num)) continue;
+					valid_list.push({
+						op: { index: opIndex, type: opsIndex },
+						num: { index: numIndex, value: num },
+						field: { index: fieldIndex }
+					});
+				}
+			}
+			else {
+				valid_list.push({
+					op: { index: opIndex, type: opsIndex },
+					num: { index: -1, value: 0 },
+					field: { index: fieldIndex }
+				});
+			}
+		}
 	}
 
-	// 2. CPUが使用するリソース（手札）をランダムに決定
-
-	// CPUのop手札 (インデックス OP_COUNT から OP_COUNT * 2 - 1)
-	const cpuOpLocalIndex = Math.floor(Math.random() * OP_COUNT);
-	const cpuOpCardIndex = cpuOpLocalIndex + OP_COUNT;
-
-	// CPUのnum手札 (インデックス NUM_COUNT から NUM_COUNT * 2 - 1)
-	const cpuNumLocalIndex = Math.floor(Math.random() * NUM_COUNT);
-	const cpuNumCardIndex = cpuNumLocalIndex + NUM_COUNT;
-
-
-	// 3. `applyCPUAnimation`が期待する形式に変換する
-
-	// 選択したopカードが示す、実際の演算（game.ops配列内のインデックス）
-	const opIndexInGameOps = game.state.op.values[cpuOpCardIndex];
-
-	// 選択したnumカードが示す、実際の数値
-	const numValue = game.state.num.values[cpuNumCardIndex];
-
-	// `applyCPUAnimation` 関数が期待する形式のオブジェクトを作成
-	const move = {
-		op: { index: cpuOpCardIndex, type: opIndexInGameOps }, // typeはgame.opsのインデックス
-		num: { index: cpuNumCardIndex, value: numValue },      // valueは実際の数値
-		field: { index: targetFieldCardIndex }                 // indexはグローバルインデックス (0-11)
-	};
-
-	return move;
+	// 有効手が無ければ手札をシャッフル
+	if (valid_list.length === 0) {
+		for (let i = 0; i < OP_COUNT; i++)
+			game.state.op.values[i + OP_COUNT] = game.state.op.create();
+		for (let i = 0; i < NUM_COUNT; i++)
+			game.state.num.values[i + NUM_COUNT] = game.state.num.create();
+		return moveCPU_Easy();
+	}
+	return valid_list[Math.floor(Math.random() * valid_list.length)];
 }
 
 // 対戦相手の手を設定 (Normal/Hard AI: 全探索)
